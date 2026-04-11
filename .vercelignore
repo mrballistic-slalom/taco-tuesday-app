@@ -1,0 +1,5 @@
+# Compiled artifacts
+api/*.js
+api/*.js.map
+src/**/*.js
+tests/**/*.js
