@@ -4,23 +4,19 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import RecipeModal from '@/components/recipes/RecipeModal.vue'
-import type { Meal } from '@/types/mealdb'
+import type { SpoonacularRecipe } from '@/types/spoonacular'
 
 const vuetify = createVuetify({ components, directives })
 
-const mockMeal: Meal = {
-  idMeal: '1',
-  strMeal: 'Beef Tacos',
-  strCategory: 'Mexican',
-  strArea: 'Mexican',
-  strInstructions: 'Season the beef.\nCook in a pan.\nServe in tortillas.',
-  strMealThumb: 'https://example.com/thumb.jpg',
-  strIngredient1: 'Beef',
-  strMeasure1: '500g',
-  strIngredient2: 'Tortillas',
-  strMeasure2: '8',
-  strIngredient3: '',
-  strMeasure3: '',
+const mockRecipe: SpoonacularRecipe = {
+  id: 1,
+  title: 'Beef Tacos',
+  image: 'https://example.com/thumb.jpg',
+  instructions: 'Season the beef.\nCook in a pan.\nServe in tortillas.',
+  extendedIngredients: [
+    { id: 1, name: 'beef', original: '500g Beef', amount: 500, unit: 'g' },
+    { id: 2, name: 'tortillas', original: '8 Tortillas', amount: 8, unit: '' },
+  ],
 }
 
 beforeEach(() => {
@@ -38,15 +34,15 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-function mountModal(meal: Meal = mockMeal, modelValue = true) {
+function mountModal(recipe: SpoonacularRecipe = mockRecipe, modelValue = true) {
   return mount(RecipeModal, {
     global: { plugins: [vuetify, createPinia()] },
-    props: { meal, modelValue },
+    props: { recipe, modelValue },
     attachTo: document.body,
   })
 }
 
-it('renders meal name when open', async () => {
+it('renders recipe title when open', async () => {
   const wrapper = mountModal()
   await wrapper.vm.$nextTick()
   // v-dialog teleports to body — check document.body
@@ -57,23 +53,26 @@ it('renders meal name when open', async () => {
 it('renders ingredients list', async () => {
   const wrapper = mountModal()
   await wrapper.vm.$nextTick()
-  expect(document.body.textContent).toContain('Beef')
-  expect(document.body.textContent).toContain('Tortillas')
+  expect(document.body.textContent).toContain('500g Beef')
+  expect(document.body.textContent).toContain('8 Tortillas')
   wrapper.unmount()
 })
 
-it('does not render YouTube button when strYoutube is absent', async () => {
+it('does not render source link when sourceUrl is absent', async () => {
   const wrapper = mountModal()
   await wrapper.vm.$nextTick()
-  expect(document.body.textContent).not.toContain('Watch on YouTube')
+  expect(document.body.textContent).not.toContain('View Full Recipe 🔗')
   wrapper.unmount()
 })
 
-it('renders YouTube button when strYoutube is present', async () => {
-  const mealWithYT: Meal = { ...mockMeal, strYoutube: 'https://youtube.com/watch?v=abc' }
-  const wrapper = mountModal(mealWithYT)
+it('renders source link button when sourceUrl is present', async () => {
+  const recipeWithSource: SpoonacularRecipe = {
+    ...mockRecipe,
+    sourceUrl: 'https://example.com/recipe',
+  }
+  const wrapper = mountModal(recipeWithSource)
   await wrapper.vm.$nextTick()
-  expect(document.body.textContent).toContain('Watch on YouTube')
+  expect(document.body.textContent).toContain('View Full Recipe')
   wrapper.unmount()
 })
 

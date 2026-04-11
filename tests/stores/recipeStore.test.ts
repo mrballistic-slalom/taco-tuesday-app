@@ -1,27 +1,27 @@
 import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import type { Meal } from '@/types/mealdb'
+import type { SpoonacularRecipe } from '@/types/spoonacular'
 
-const mockSearchMeals = vi.fn()
-const mockGetMealById = vi.fn()
+const mockSearchRecipes = vi.fn()
+const mockGetRecipeById = vi.fn()
 
-vi.mock('@/composables/useMealDB', () => ({
-  useMealDB: () => ({
-    searchMeals: mockSearchMeals,
-    getMealById: mockGetMealById,
-    getRandomMeal: vi.fn(),
+vi.mock('@/composables/useSpoonacular', () => ({
+  useSpoonacular: () => ({
+    searchRecipes: mockSearchRecipes,
+    getRecipeById: mockGetRecipeById,
+    getRandomRecipeForType: vi.fn(),
   }),
 }))
 
 import { useRecipeStore } from '@/stores/recipeStore'
 
-const mockMeal: Meal = {
-  idMeal: '1',
-  strMeal: 'Beef Tacos',
-  strCategory: 'Mexican',
-  strArea: 'Mexican',
-  strInstructions: 'Cook the beef.',
-  strMealThumb: 'https://example.com/thumb.jpg',
+const mockRecipe: SpoonacularRecipe = {
+  id: 1,
+  title: 'Beef Tacos',
+  image: 'https://example.com/thumb.jpg',
+  cuisines: ['Mexican'],
+  extendedIngredients: [],
+  instructions: 'Cook the beef.',
 }
 
 describe('recipeStore', () => {
@@ -31,20 +31,20 @@ describe('recipeStore', () => {
   })
 
   describe('searchRecipes', () => {
-    it('sets recipes to returned meals on success', async () => {
-      mockSearchMeals.mockResolvedValueOnce([mockMeal])
+    it('sets recipes to returned recipes on success', async () => {
+      mockSearchRecipes.mockResolvedValueOnce([mockRecipe])
 
       const store = useRecipeStore()
       await store.searchRecipes('taco')
 
-      expect(store.recipes).toEqual([mockMeal])
+      expect(store.recipes).toEqual([mockRecipe])
       expect(store.searchQuery).toBe('taco')
       expect(store.loading).toBe(false)
       expect(store.error).toBeNull()
     })
 
-    it('sets recipes to empty array when no meals returned', async () => {
-      mockSearchMeals.mockResolvedValueOnce([])
+    it('sets recipes to empty array when no recipes returned', async () => {
+      mockSearchRecipes.mockResolvedValueOnce([])
 
       const store = useRecipeStore()
       await store.searchRecipes('mystery')
@@ -55,7 +55,7 @@ describe('recipeStore', () => {
     })
 
     it('sets error and empty recipes on failure', async () => {
-      mockSearchMeals.mockRejectedValueOnce(new Error('Search failed'))
+      mockSearchRecipes.mockRejectedValueOnce(new Error('Search failed'))
 
       const store = useRecipeStore()
       await store.searchRecipes('taco')
@@ -68,21 +68,21 @@ describe('recipeStore', () => {
 
   describe('fetchRecipeById', () => {
     it('sets selectedRecipe on success', async () => {
-      mockGetMealById.mockResolvedValueOnce(mockMeal)
+      mockGetRecipeById.mockResolvedValueOnce(mockRecipe)
 
       const store = useRecipeStore()
-      await store.fetchRecipeById('1')
+      await store.fetchRecipeById(1)
 
-      expect(store.selectedRecipe).toEqual(mockMeal)
+      expect(store.selectedRecipe).toEqual(mockRecipe)
       expect(store.loading).toBe(false)
       expect(store.error).toBeNull()
     })
 
     it('keeps selectedRecipe null when result is null', async () => {
-      mockGetMealById.mockResolvedValueOnce(null)
+      mockGetRecipeById.mockResolvedValueOnce(null)
 
       const store = useRecipeStore()
-      await store.fetchRecipeById('999')
+      await store.fetchRecipeById(999)
 
       expect(store.selectedRecipe).toBeNull()
       expect(store.loading).toBe(false)
@@ -91,11 +91,11 @@ describe('recipeStore', () => {
 
   describe('clearSelection', () => {
     it('resets selectedRecipe to null', async () => {
-      mockGetMealById.mockResolvedValueOnce(mockMeal)
+      mockGetRecipeById.mockResolvedValueOnce(mockRecipe)
 
       const store = useRecipeStore()
-      await store.fetchRecipeById('1')
-      expect(store.selectedRecipe).toEqual(mockMeal)
+      await store.fetchRecipeById(1)
+      expect(store.selectedRecipe).toEqual(mockRecipe)
 
       store.clearSelection()
       expect(store.selectedRecipe).toBeNull()

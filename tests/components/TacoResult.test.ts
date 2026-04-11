@@ -4,17 +4,14 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import TacoResult from '@/components/randomizer/TacoResult.vue'
-import type { Meal } from '@/types/mealdb'
+import type { SpoonacularRecipe } from '@/types/spoonacular'
 
 const vuetify = createVuetify({ components, directives })
 
-const mockMeal: Meal = {
-  idMeal: '1',
-  strMeal: 'Al Pastor Tacos',
-  strCategory: 'Mexican',
-  strArea: 'Mexican',
-  strInstructions: 'Marinate and grill the pork.',
-  strMealThumb: 'https://example.com/thumb.jpg',
+const mockRecipe: SpoonacularRecipe = {
+  id: 1,
+  title: 'Al Pastor Tacos',
+  image: 'https://example.com/thumb.jpg',
 }
 
 beforeEach(() => setActivePinia(createPinia()))
@@ -22,7 +19,7 @@ beforeEach(() => setActivePinia(createPinia()))
 it('renders meal name', () => {
   const wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
-    props: { meal: mockMeal },
+    props: { recipe: mockRecipe },
   })
   expect(wrapper.text()).toContain('Al Pastor Tacos')
 })
@@ -30,7 +27,7 @@ it('renders meal name', () => {
 it('renders "View Full Recipe" button', () => {
   const wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
-    props: { meal: mockMeal },
+    props: { recipe: mockRecipe },
   })
   expect(wrapper.text()).toContain('View Full Recipe')
 })
@@ -38,7 +35,7 @@ it('renders "View Full Recipe" button', () => {
 it('renders "SPIN AGAIN" button', () => {
   const wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
-    props: { meal: mockMeal },
+    props: { recipe: mockRecipe },
   })
   expect(wrapper.text()).toContain('SPIN AGAIN')
 })
@@ -46,7 +43,7 @@ it('renders "SPIN AGAIN" button', () => {
 it('emits view-recipe on button click', async () => {
   const wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
-    props: { meal: mockMeal },
+    props: { recipe: mockRecipe },
   })
   const btns = wrapper.findAll('button')
   const viewBtn = btns.find((b) => b.text().includes('View Full Recipe'))
@@ -59,7 +56,7 @@ it('emits view-recipe on button click', async () => {
 it('emits spin-again on button click', async () => {
   const wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
-    props: { meal: mockMeal },
+    props: { recipe: mockRecipe },
   })
   const btns = wrapper.findAll('button')
   const spinBtn = btns.find((b) => b.text().includes('SPIN AGAIN'))

@@ -6,7 +6,7 @@
     @update:model-value="emit('update:modelValue', $event)"
   >
     <v-card>
-      <v-img :src="meal.strMealThumb" height="300" cover>
+      <v-img :src="recipe.image" height="300" cover>
         <div class="d-flex justify-end pa-2">
           <v-btn
             icon="mdi-close"
@@ -18,23 +18,27 @@
         </div>
       </v-img>
 
-      <v-card-title class="text-h5 pt-4">{{ meal.strMeal }}</v-card-title>
+      <v-card-title class="text-h5 pt-4">{{ recipe.title }}</v-card-title>
 
       <v-card-text>
         <div class="text-h6 mb-2">Ingredients</div>
         <v-list density="compact">
-          <v-list-item v-for="ing in parsedIngredients" :key="ing.ingredient" class="px-0">
+          <v-list-item
+            v-for="ing in recipe.extendedIngredients ?? []"
+            :key="ing.name"
+            class="px-0"
+          >
             <template #prepend>
               <v-checkbox
-                v-model="checkedIngredients[ing.ingredient]"
+                v-model="checkedIngredients[ing.name]"
                 density="compact"
                 hide-details
               />
             </template>
             <v-list-item-title
-              :style="checkedIngredients[ing.ingredient] ? 'text-decoration: line-through; opacity: 0.6' : ''"
+              :style="checkedIngredients[ing.name] ? 'text-decoration: line-through; opacity: 0.6' : ''"
             >
-              {{ ing.measure }} {{ ing.ingredient }}
+              {{ ing.original }}
             </v-list-item-title>
           </v-list-item>
         </v-list>
@@ -46,15 +50,15 @@
         <div class="instructions-text" v-html="formattedInstructions" />
       </v-card-text>
 
-      <v-card-actions v-if="meal.strYoutube" class="pa-4">
+      <v-card-actions v-if="recipe.sourceUrl" class="pa-4">
         <v-btn
-          color="error"
+          color="primary"
           variant="elevated"
-          :href="meal.strYoutube"
+          :href="recipe.sourceUrl"
           target="_blank"
-          aria-label="Watch recipe on YouTube"
+          aria-label="View full recipe source"
         >
-          Watch on YouTube 🎬
+          View Full Recipe 🔗
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -62,36 +66,106 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * @component RecipeModal
+ *
+ * A full-featured recipe detail dialog built on Vuetify's `v-dialog`. When
+ * opened it shows:
+ *   - A large hero image (300px tall, cover-cropped) with a close button
+ *     overlaid in the top-right corner.
+ *   - A scrollable ingredients list rendered as a `v-list` where each item has
+ *     a checkbox. Checking an ingredient marks it as "in hand" with a
+ *     strikethrough and reduced opacity — purely local, client-side UX.
+ *   - Cooking instructions with newline characters converted to `<br>` tags for
+ *     proper multi-line display.
+ *   - An optional "View Full Recipe" button that opens the recipe's source URL
+ *     in a new tab, shown only when `recipe.sourceUrl` is present.
+ *
+ * On small-and-down (`smAndDown`) screens the dialog goes fullscreen to make
+ * better use of limited viewport space. On larger screens it is constrained to
+ * a max-width of 800px and centred.
+ *
+ * This component implements the Vue `v-model` pattern: `modelValue` controls
+ * visibility and `update:modelValue` is emitted to close it.
+ *
+ * @example
+ * <RecipeModal
+ *   v-if="selectedRecipe"
+ *   :recipe="selectedRecipe"
+ *   v-model="modalOpen"
+ * />
+ */
+
 import { computed, reactive } from 'vue'
 import { useDisplay } from 'vuetify'
-import type { Meal, ParsedIngredient } from '@/types/mealdb'
+import type { SpoonacularRecipe } from '@/types/spoonacular'
 
+/**
+ * Props accepted by RecipeModal.
+ *
+ * @prop recipe - The full `SpoonacularRecipe` object from Spoonacular whose
+ *   details are displayed. Must be a complete record so that `instructions`
+ *   and `extendedIngredients` are populated. Passing a stub or partial object
+ *   will produce empty ingredient lists and blank instructions.
+ *
+ * @prop modelValue - Controls the open/closed state of the underlying
+ *   `v-dialog`. Pass `true` to show the modal, `false` to hide it. Follows the
+ *   standard Vue `v-model` convention — bind with `v-model` or manually with
+ *   `:model-value` and `@update:model-value`.
+ */
 const props = defineProps<{
-  meal: Meal
+  recipe: SpoonacularRecipe
   modelValue: boolean
 }>()
 
+/**
+ * Events emitted by RecipeModal.
+ *
+ * @emits update:modelValue - Fired whenever the dialog requests a visibility
+ *   change: when the user clicks the close button (emitted with `false`) or when
+ *   the Vuetify dialog fires its own `update:model-value` event (forwarded
+ *   directly). The parent must update its own boolean ref in response to keep
+ *   the `v-model` in sync.
+ *
+ * @param value - `true` to keep the dialog open, `false` to close it.
+ */
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
 }>()
 
+/**
+ * Vuetify display composable destructured for the `smAndDown` breakpoint ref.
+ * When `smAndDown` is `true` (screen width ≤ 599px) the dialog switches to
+ * fullscreen mode to maximise the usable area on small devices like phones.
+ */
 const { smAndDown } = useDisplay()
 
+/**
+ * Reactive dictionary that tracks which ingredients the user has checked off.
+ * Keys are ingredient name strings (e.g. `"chicken"`); values are booleans
+ * where `true` means the ingredient has been checked (user has it on hand).
+ * State is per-modal-instance and resets whenever the component is unmounted.
+ *
+ * Ingredient names from `extendedIngredients[].name` are used as keys so that
+ * checking one item in a re-ordered list does not accidentally mark the wrong
+ * ingredient.
+ */
 const checkedIngredients = reactive<Record<string, boolean>>({})
 
-function parseIngredients(meal: Meal): ParsedIngredient[] {
-  return Array.from({ length: 20 }, (_, i) => i + 1)
-    .map((i) => ({
-      ingredient: (meal[`strIngredient${i}`] as string | null) ?? '',
-      measure: (meal[`strMeasure${i}`] as string | null) ?? '',
-    }))
-    .filter(({ ingredient }) => ingredient.trim() !== '')
-}
-
-const parsedIngredients = computed(() => parseIngredients(props.meal))
-
+/**
+ * Computed string containing the recipe's cooking instructions with all newline
+ * characters (`\n`) replaced by HTML `<br>` tags. This allows instructions that
+ * use newlines for paragraph breaks to render correctly inside the `v-html` div
+ * in the template.
+ *
+ * Note: The template suppresses the `vue/no-v-html` ESLint warning with a
+ * comment because the source data is trusted (Spoonacular, a curated public API).
+ *
+ * @returns The full instructions string with `\n` replaced by `<br>`, or an
+ *   empty string when `instructions` is undefined.
+ */
 const formattedInstructions = computed(() =>
-  props.meal.strInstructions.replace(/\n/g, '<br>')
+  props.recipe.instructions?.replace(/\n/g, '<br>') ?? ''
 )
 </script>
 

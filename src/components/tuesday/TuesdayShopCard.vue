@@ -1,12 +1,52 @@
 <script setup lang="ts">
+/**
+ * TuesdayShopCard component.
+ *
+ * A specialised variant of the shop card used exclusively in `TuesdayView`.
+ * It renders a Yelp business with a prominent rank badge (🥇/🥈/🥉 medals
+ * for the top-3 spots, a numbered `v-chip` for ranks 4–10) overlaid on the
+ * cover photo, plus the shop's name, a randomly selected Tuesday-themed
+ * tagline, star rating, address, price range, and a Yelp deep-link button.
+ *
+ * Cards are stacked vertically in `TuesdayView` and are only shown when it
+ * is actually Tuesday and the Yelp API has returned results.
+ *
+ * @example
+ * ```vue
+ * <TuesdayShopCard
+ *   v-for="(spot, index) in tuesdayStore.spots"
+ *   :key="spot.id"
+ *   :shop="spot"
+ *   :rank="index + 1"
+ *   class="mb-4"
+ * />
+ * ```
+ */
 import { computed } from 'vue'
 import type { YelpBusiness } from '@/types/yelp'
 
+/**
+ * Props accepted by the TuesdayShopCard component.
+ */
 const props = defineProps<{
+  /**
+   * The Yelp business to render. Must be a fully-hydrated `YelpBusiness`
+   * record sourced from the Yelp proxy endpoint via `tuesdayStore`.
+   */
   shop: YelpBusiness
+
+  /**
+   * 1-based rank of this shop in the sorted result list.
+   * Ranks 1–3 display medal emoji; ranks 4+ display a numbered chip.
+   */
   rank: number
 }>()
 
+/**
+ * Pool of six Tuesday-specific taglines.
+ * One is randomly selected once per component mount to give each card a
+ * unique flavour without requiring network data.
+ */
 const taglines = [
   'Your Tuesday just got a whole lot tastier.',
   'The taco gods have spoken.',
@@ -16,10 +56,31 @@ const taglines = [
   'The taco council endorses this spot.',
 ]
 
+/**
+ * A randomly selected tagline from the `taglines` pool.
+ * Stable for the lifetime of this card instance.
+ */
 const tagline = taglines[Math.floor(Math.random() * taglines.length)]
 
+/**
+ * The shop's full street address as a single comma-separated string,
+ * constructed by joining the `display_address` array from the Yelp payload.
+ *
+ * @example "456 NW 23rd Ave, Portland, OR 97210"
+ */
 const address = props.shop.location.display_address.join(', ')
 
+/**
+ * Maps the numeric rank to a medal emoji for the top-3 positions, or
+ * `null` for ranks 4 and above (which fall back to a numbered chip in
+ * the template).
+ *
+ * @returns {'🥇' | '🥈' | '🥉' | null} Medal emoji, or null for rank > 3.
+ *
+ * @example
+ * // rank === 1 → '🥇'
+ * // rank === 4 → null  (template renders "#4" chip instead)
+ */
 const rankEmoji = computed(() => {
   if (props.rank === 1) return '🥇'
   if (props.rank === 2) return '🥈'

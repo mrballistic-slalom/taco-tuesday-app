@@ -1,26 +1,26 @@
 import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import type { Meal } from '@/types/mealdb'
+import type { SpoonacularRecipe } from '@/types/spoonacular'
 
-const mockSearchMeals = vi.fn()
+const mockGetRandomRecipeForType = vi.fn()
 
-vi.mock('@/composables/useMealDB', () => ({
-  useMealDB: () => ({
-    searchMeals: mockSearchMeals,
-    getMealById: vi.fn(),
-    getRandomMeal: vi.fn(),
+vi.mock('@/composables/useSpoonacular', () => ({
+  useSpoonacular: () => ({
+    searchRecipes: vi.fn(),
+    getRecipeById: vi.fn(),
+    getRandomRecipeForType: mockGetRandomRecipeForType,
   }),
 }))
 
 import { useRandomizerStore } from '@/stores/randomizerStore'
 
-const mockMeal: Meal = {
-  idMeal: '1',
-  strMeal: 'Beef Tacos',
-  strCategory: 'Mexican',
-  strArea: 'Mexican',
-  strInstructions: 'Cook the beef.',
-  strMealThumb: 'https://example.com/thumb.jpg',
+const mockRecipe: SpoonacularRecipe = {
+  id: 1,
+  title: 'Al Pastor Tacos',
+  image: 'https://example.com/thumb.jpg',
+  cuisines: ['Mexican'],
+  extendedIngredients: [],
+  instructions: 'Marinate and grill the pork.',
 }
 
 describe('randomizerStore', () => {
@@ -30,32 +30,33 @@ describe('randomizerStore', () => {
   })
 
   describe('spin', () => {
-    it('sets result when a meal is found, isSpinning is false, error is null', async () => {
-      mockSearchMeals.mockResolvedValueOnce([mockMeal])
+    it('sets result when a recipe is found, isSpinning is false, error is null', async () => {
+      mockGetRandomRecipeForType.mockResolvedValueOnce(mockRecipe)
 
       const store = useRandomizerStore()
-      await store.spin('beef taco')
+      await store.spin('Al Pastor')
 
-      expect(store.result).toEqual(mockMeal)
+      expect(store.result).toEqual(mockRecipe)
+      expect(store.result?.title).toBe('Al Pastor Tacos')
       expect(store.isSpinning).toBe(false)
       expect(store.error).toBeNull()
     })
 
     it('sets error with taco-less message when no results returned', async () => {
-      mockSearchMeals.mockResolvedValueOnce([])
+      mockGetRandomRecipeForType.mockResolvedValueOnce(null)
 
       const store = useRandomizerStore()
       await store.spin('unicorn taco')
 
       expect(store.result).toBeNull()
       expect(store.error).toBe(
-        "TheMealDB is taco-less for 'unicorn taco'. The audacity. Try again! 🌮"
+        "Spoonacular came up empty for 'unicorn taco'. The audacity. Try again! 🌮"
       )
       expect(store.isSpinning).toBe(false)
     })
 
     it('sets error message on exception', async () => {
-      mockSearchMeals.mockRejectedValueOnce(new Error('API down'))
+      mockGetRandomRecipeForType.mockRejectedValueOnce(new Error('API down'))
 
       const store = useRandomizerStore()
       await store.spin('taco')
@@ -68,11 +69,11 @@ describe('randomizerStore', () => {
 
   describe('reset', () => {
     it('resets result, error, and isSpinning', async () => {
-      mockSearchMeals.mockResolvedValueOnce([mockMeal])
+      mockGetRandomRecipeForType.mockResolvedValueOnce(mockRecipe)
 
       const store = useRandomizerStore()
-      await store.spin('beef taco')
-      expect(store.result).toEqual(mockMeal)
+      await store.spin('Al Pastor')
+      expect(store.result).toEqual(mockRecipe)
 
       store.reset()
       expect(store.result).toBeNull()
