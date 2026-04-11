@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+
+# Coverage
+coverage/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Editor
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Vercel
+.vercel/
+
+# Compiled artifacts (tsc emitted files — source is .ts/.vue)
+**/*.vue.js
+**/*.vue.js.map
+src/**/*.js
+src/**/*.js.map
+api/*.js
+api/*.js.map
+tests/**/*.js
+tests/**/*.js.map
+
+# Logs
+*.log
+npm-debug.log*
