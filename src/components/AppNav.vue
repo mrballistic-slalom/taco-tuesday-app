@@ -75,9 +75,21 @@ const tuesdayItemStyle = computed(() => {
 
       <template #append>
         <div class="pa-3">
-          <v-chip size="small" color="secondary" class="text-wrap" style="height: auto; white-space: normal">
+          <v-chip size="small" color="secondary" class="text-wrap mb-2" style="height: auto; white-space: normal">
             {{ randomFact }}
           </v-chip>
+          <div class="mt-1">
+            <a
+              href="https://github.com/mrballistic-slalom/taco-tuesday-app"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="github-link"
+              aria-label="View source on GitHub"
+            >
+              <v-icon size="14" class="mr-1">mdi-github</v-icon>
+              <span class="text-caption">View source</span>
+            </a>
+          </div>
         </div>
       </template>
     </v-navigation-drawer>
@@ -121,6 +133,18 @@ const tuesdayItemStyle = computed(() => {
   100% {
     background-color: #ff6b35;
   }
+}
+
+.github-link {
+  display: flex;
+  align-items: center;
+  color: rgba(234, 234, 234, 0.5);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.github-link:hover {
+  color: #eaeaea;
 }
 
 @keyframes pulse {
