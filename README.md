@@ -142,6 +142,7 @@ src/
 ├── router/index.ts             # Hash-history routes
 └── main.ts                     # App entry point
 api/
+├── spoonacular.ts              # Vercel Edge Function — Spoonacular proxy
 └── yelp.ts                     # Vercel Edge Function — Yelp proxy
 ```
 

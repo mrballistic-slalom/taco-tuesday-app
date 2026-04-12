@@ -125,7 +125,7 @@ function closeSelection() {
       color="surface"
       elevation="6"
       rounded="lg"
-      style="position: absolute; top: 72px; left: 16px; z-index: 10; min-width: 220px"
+      style="position: absolute; top: 16px; left: 16px; z-index: 10; min-width: 220px"
     >
       <v-card-title class="d-flex align-center ga-3 py-3 px-4">
         <span>Find Tacos Near You</span>
@@ -213,7 +213,16 @@ function closeSelection() {
 .map-view-container {
   position: relative;
   width: 100%;
-  height: calc(100vh - 64px);
+  height: 100vh;
+  height: 100dvh;
   overflow: hidden;
+}
+
+/* Mobile: account for v-bottom-navigation (56px) */
+@media (max-width: 959.98px) {
+  .map-view-container {
+    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
+  }
 }
 </style>

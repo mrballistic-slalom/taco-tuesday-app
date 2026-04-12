@@ -163,7 +163,7 @@ onMounted(() => {
   map.value = new mapboxgl.Map({
     container: 'map',
     style: 'mapbox://styles/mapbox/dark-v11',
-    zoom: 13,
+    zoom: 14,
     pitch: 45,
     bearing: 0,
     center: [PORTLAND_LNG, PORTLAND_LAT],
@@ -185,7 +185,7 @@ onMounted(() => {
 
   getLocation()
     .then(({ lat, lng }) => {
-      map.value?.flyTo({ center: [lng, lat], zoom: 13, pitch: 45 })
+      map.value?.flyTo({ center: [lng, lat], zoom: 14, pitch: 45 })
       return mapStore.fetchShops(lat, lng)
     })
     .catch(() => {
