@@ -1,4 +1,5 @@
-import { mount } from '@vue/test-utils'
+import { mount, VueWrapper } from '@vue/test-utils'
+import { vi, afterEach, beforeEach } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -13,10 +14,21 @@ const mockRecipes: SpoonacularRecipe[] = [
   { id: 2, title: 'Fish Tacos', image: 'https://example.com/fish.jpg' },
 ]
 
-beforeEach(() => setActivePinia(createPinia()))
+let wrapper: VueWrapper
+
+beforeEach(() => {
+  vi.useFakeTimers()
+  setActivePinia(createPinia())
+})
+
+afterEach(() => {
+  wrapper.unmount()
+  vi.runOnlyPendingTimers()
+  vi.useRealTimers()
+})
 
 it('renders a card for each recipe', () => {
-  const wrapper = mount(RecipeGrid, {
+  wrapper = mount(RecipeGrid, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipes: mockRecipes },
   })
@@ -25,7 +37,7 @@ it('renders a card for each recipe', () => {
 })
 
 it('renders empty when no recipes', () => {
-  const wrapper = mount(RecipeGrid, {
+  wrapper = mount(RecipeGrid, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipes: [] },
   })
@@ -33,11 +45,10 @@ it('renders empty when no recipes', () => {
 })
 
 it('emits recipe-click when a card is clicked', async () => {
-  const wrapper = mount(RecipeGrid, {
+  wrapper = mount(RecipeGrid, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipes: mockRecipes },
   })
-  // Trigger click on first button found (Get Recipe)
   const btn = wrapper.find('button')
   if (btn.exists()) {
     await btn.trigger('click')

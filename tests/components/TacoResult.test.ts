@@ -1,4 +1,5 @@
-import { mount } from '@vue/test-utils'
+import { mount, VueWrapper } from '@vue/test-utils'
+import { vi, afterEach, beforeEach } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -14,10 +15,21 @@ const mockRecipe: SpoonacularRecipe = {
   image: 'https://example.com/thumb.jpg',
 }
 
-beforeEach(() => setActivePinia(createPinia()))
+let wrapper: VueWrapper
+
+beforeEach(() => {
+  vi.useFakeTimers()
+  setActivePinia(createPinia())
+})
+
+afterEach(() => {
+  wrapper.unmount()
+  vi.runOnlyPendingTimers()
+  vi.useRealTimers()
+})
 
 it('renders meal name', () => {
-  const wrapper = mount(TacoResult, {
+  wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
@@ -25,7 +37,7 @@ it('renders meal name', () => {
 })
 
 it('renders "View Full Recipe" button', () => {
-  const wrapper = mount(TacoResult, {
+  wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
@@ -33,7 +45,7 @@ it('renders "View Full Recipe" button', () => {
 })
 
 it('renders "SPIN AGAIN" button', () => {
-  const wrapper = mount(TacoResult, {
+  wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
@@ -41,7 +53,7 @@ it('renders "SPIN AGAIN" button', () => {
 })
 
 it('emits view-recipe on button click', async () => {
-  const wrapper = mount(TacoResult, {
+  wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
@@ -54,7 +66,7 @@ it('emits view-recipe on button click', async () => {
 })
 
 it('emits spin-again on button click', async () => {
-  const wrapper = mount(TacoResult, {
+  wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })

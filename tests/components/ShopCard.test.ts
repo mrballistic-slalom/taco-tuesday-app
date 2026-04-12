@@ -1,4 +1,5 @@
-import { mount } from '@vue/test-utils'
+import { mount, VueWrapper } from '@vue/test-utils'
+import { vi, afterEach, beforeEach } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -20,10 +21,21 @@ const mockShop: YelpBusiness = {
   url: 'https://yelp.com/biz/taco-paradise',
 }
 
-beforeEach(() => setActivePinia(createPinia()))
+let wrapper: VueWrapper
+
+beforeEach(() => {
+  vi.useFakeTimers()
+  setActivePinia(createPinia())
+})
+
+afterEach(() => {
+  wrapper.unmount()
+  vi.runOnlyPendingTimers()
+  vi.useRealTimers()
+})
 
 it('renders shop name', () => {
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
@@ -31,7 +43,7 @@ it('renders shop name', () => {
 })
 
 it('renders address', () => {
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
@@ -39,7 +51,7 @@ it('renders address', () => {
 })
 
 it('renders Yelp link with correct href', () => {
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
@@ -48,7 +60,7 @@ it('renders Yelp link with correct href', () => {
 })
 
 it('renders price chip', () => {
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
@@ -56,7 +68,7 @@ it('renders price chip', () => {
 })
 
 it('renders category chip', () => {
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
@@ -64,7 +76,7 @@ it('renders category chip', () => {
 })
 
 it('renders review count', () => {
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
@@ -72,7 +84,7 @@ it('renders review count', () => {
 })
 
 it('renders View on Yelp button with correct aria-label', () => {
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
@@ -82,17 +94,16 @@ it('renders View on Yelp button with correct aria-label', () => {
 
 it('does not render price chip when price is undefined', () => {
   const shopWithoutPrice: YelpBusiness = { ...mockShop, price: undefined }
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: shopWithoutPrice },
   })
-  // Should still render the shop name but no price chip
   expect(wrapper.text()).toContain('Taco Paradise')
   expect(wrapper.text()).not.toContain('$$')
 })
 
 it('renders a random tagline', () => {
-  const wrapper = mount(ShopCard, {
+  wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })

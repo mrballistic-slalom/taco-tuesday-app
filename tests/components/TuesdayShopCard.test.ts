@@ -1,4 +1,5 @@
-import { mount } from '@vue/test-utils'
+import { mount, VueWrapper } from '@vue/test-utils'
+import { vi, afterEach, beforeEach } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -20,10 +21,21 @@ const mockShop: YelpBusiness = {
   url: 'https://yelp.com/biz/tuesday-taco-spot',
 }
 
-beforeEach(() => setActivePinia(createPinia()))
+let wrapper: VueWrapper
+
+beforeEach(() => {
+  vi.useFakeTimers()
+  setActivePinia(createPinia())
+})
+
+afterEach(() => {
+  wrapper.unmount()
+  vi.runOnlyPendingTimers()
+  vi.useRealTimers()
+})
 
 it('renders shop name', () => {
-  const wrapper = mount(TuesdayShopCard, {
+  wrapper = mount(TuesdayShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop, rank: 1 },
   })
@@ -31,7 +43,7 @@ it('renders shop name', () => {
 })
 
 it('renders gold medal badge for rank 1', () => {
-  const wrapper = mount(TuesdayShopCard, {
+  wrapper = mount(TuesdayShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop, rank: 1 },
   })
@@ -39,7 +51,7 @@ it('renders gold medal badge for rank 1', () => {
 })
 
 it('renders silver medal badge for rank 2', () => {
-  const wrapper = mount(TuesdayShopCard, {
+  wrapper = mount(TuesdayShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop, rank: 2 },
   })
@@ -47,7 +59,7 @@ it('renders silver medal badge for rank 2', () => {
 })
 
 it('renders bronze medal badge for rank 3', () => {
-  const wrapper = mount(TuesdayShopCard, {
+  wrapper = mount(TuesdayShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop, rank: 3 },
   })
@@ -55,7 +67,7 @@ it('renders bronze medal badge for rank 3', () => {
 })
 
 it('renders numeric badge for rank 4+', () => {
-  const wrapper = mount(TuesdayShopCard, {
+  wrapper = mount(TuesdayShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop, rank: 4 },
   })
@@ -63,7 +75,7 @@ it('renders numeric badge for rank 4+', () => {
 })
 
 it('renders Yelp link', () => {
-  const wrapper = mount(TuesdayShopCard, {
+  wrapper = mount(TuesdayShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop, rank: 1 },
   })
@@ -72,7 +84,7 @@ it('renders Yelp link', () => {
 })
 
 it('renders address', () => {
-  const wrapper = mount(TuesdayShopCard, {
+  wrapper = mount(TuesdayShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop, rank: 1 },
   })

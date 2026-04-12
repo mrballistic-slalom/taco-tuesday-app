@@ -1,4 +1,5 @@
-import { mount } from '@vue/test-utils'
+import { mount, VueWrapper } from '@vue/test-utils'
+import { vi, afterEach, beforeEach } from 'vitest'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
@@ -14,10 +15,21 @@ const mockRecipe: SpoonacularRecipe = {
   cuisines: ['Mexican'],
 }
 
-beforeEach(() => setActivePinia(createPinia()))
+let wrapper: VueWrapper
+
+beforeEach(() => {
+  vi.useFakeTimers()
+  setActivePinia(createPinia())
+})
+
+afterEach(() => {
+  wrapper.unmount()
+  vi.runOnlyPendingTimers()
+  vi.useRealTimers()
+})
 
 it('renders meal name', async () => {
-  const wrapper = mount(RecipeCard, {
+  wrapper = mount(RecipeCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
@@ -25,7 +37,7 @@ it('renders meal name', async () => {
 })
 
 it('renders category chip', async () => {
-  const wrapper = mount(RecipeCard, {
+  wrapper = mount(RecipeCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
@@ -33,7 +45,7 @@ it('renders category chip', async () => {
 })
 
 it('renders Get Recipe button', async () => {
-  const wrapper = mount(RecipeCard, {
+  wrapper = mount(RecipeCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
@@ -41,11 +53,10 @@ it('renders Get Recipe button', async () => {
 })
 
 it('emits click when Get Recipe button pressed', async () => {
-  const wrapper = mount(RecipeCard, {
+  wrapper = mount(RecipeCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
-  // Find and click the button
   const btn = wrapper.find('button')
   await btn.trigger('click')
   expect(wrapper.emitted('click')).toBeTruthy()
