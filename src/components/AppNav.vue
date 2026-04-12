@@ -156,7 +156,7 @@ const tuesdayItemStyle = computed(() => {
           :prepend-icon="item.icon"
           :title="item.label"
           :active="currentRoute === item.path"
-          active-color="primary"
+          color="primary"
           :style="item.path === '/tuesday' ? tuesdayItemStyle : {}"
           @click="navigate(item.path)"
         />
