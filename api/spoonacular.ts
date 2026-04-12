@@ -48,10 +48,18 @@ const SPOONACULAR_BASE = 'https://api.spoonacular.com'
  * const { results } = await res.json()
  */
 export default async function handler(request: Request): Promise<Response> {
+  if (request.method !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   const url = new URL(request.url)
   const query = url.searchParams.get('query')
   const id = url.searchParams.get('id')
-  const number = url.searchParams.get('number') ?? '20'
+  const rawNumber = parseInt(url.searchParams.get('number') ?? '20', 10)
+  const number = String(Math.min(Math.max(isNaN(rawNumber) ? 20 : rawNumber, 1), 50))
 
   const apiKey = process.env.SPOONACULAR_API_KEY
   if (!apiKey) {

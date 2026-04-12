@@ -23,7 +23,7 @@
 | State Management | Pinia | One store per feature domain |
 | Map | Mapbox GL JS v3 | 3D buildings enabled, dark map style |
 | Recipe API | TheMealDB REST API | Free tier, no API key required |
-| Local Business API | Yelp Fusion API | Free tier, requires `VITE_YELP_API_KEY` |
+| Local Business API | Yelp Fusion API | Free tier, requires `YELP_API_KEY` (server-side only) |
 | HTTP Client | Native `fetch` | No Axios; keep bundle lean |
 | Linting | ESLint + `@typescript-eslint` + `eslint-plugin-vue` | Must pass with zero errors |
 | Formatting | Prettier | Enforced via lint |
@@ -36,11 +36,12 @@
 
 ## 3. Environment Variables
 
-All secrets are prefixed `VITE_` for Vite client exposure. Add all of these to both `.env.local` and the Vercel project environment settings.
+Add all of these to both `.env.local` and the Vercel project environment settings. Only `VITE_MAPBOX_TOKEN` is exposed to the browser; all other keys are server-side only.
 
 ```
-VITE_MAPBOX_TOKEN=        # Mapbox public access token
-VITE_YELP_API_KEY=        # Yelp Fusion API key (Bearer token)
+VITE_MAPBOX_TOKEN=        # Mapbox public access token (client-safe, domain-restricted)
+YELP_API_KEY=             # Yelp Fusion API key — SERVER SIDE ONLY, no VITE_ prefix
+SPOONACULAR_API_KEY=      # Spoonacular API key — SERVER SIDE ONLY, no VITE_ prefix
 ```
 
 > **Note on Yelp CORS:** The Yelp Fusion API does not support browser-side CORS. All Yelp API calls must be proxied through a Vercel serverless function at `/api/yelp`. See Section 9 for the proxy spec.
@@ -613,9 +614,9 @@ jobs:
 3. Build command: `npm run build`
 4. Output directory: `dist`
 5. Set environment variables in Vercel dashboard:
-   - `VITE_MAPBOX_TOKEN` (client-side)
-   - `VITE_YELP_API_KEY` — **do not set this one** (it should not reach the browser)
+   - `VITE_MAPBOX_TOKEN` (client-side, domain-restricted)
    - `YELP_API_KEY` (server-side only, used by `api/yelp.ts`)
+   - `SPOONACULAR_API_KEY` (server-side only, used by `api/spoonacular.ts`)
 
 ---
 

@@ -56,6 +56,7 @@
           variant="elevated"
           :href="recipe.sourceUrl"
           target="_blank"
+          rel="noopener noreferrer"
           aria-label="View full recipe source"
         >
           View Full Recipe 🔗
@@ -164,8 +165,18 @@ const checkedIngredients = reactive<Record<string, boolean>>({})
  * @returns The full instructions string with `\n` replaced by `<br>`, or an
  *   empty string when `instructions` is undefined.
  */
+/**
+ * Strips all HTML tags except `<br>` from the given string to prevent XSS
+ * from untrusted third-party API responses rendered via `v-html`.
+ */
+function sanitizeHtml(html: string): string {
+  return html.replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\n/g, '<br>')
+}
+
 const formattedInstructions = computed(() =>
-  props.recipe.instructions?.replace(/\n/g, '<br>') ?? ''
+  sanitizeHtml(props.recipe.instructions?.replace(/\n/g, '<br>') ?? '')
 )
 </script>
 
