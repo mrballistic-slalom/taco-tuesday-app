@@ -2,9 +2,9 @@
 /**
  * ShopCard component.
  *
- * Displays a rich summary card for a single Yelp taco shop, including its
- * cover photo, a randomly selected humorous tagline, star rating, address,
- * price range, category chips, and a deep-link button to the Yelp listing.
+ * Displays a summary card for a single Mapbox taco POI: its name, a randomly
+ * selected humorous tagline, full address, category chips, and a deep link to
+ * Google Maps driving directions.
  *
  * Designed to be rendered both inside the desktop `v-navigation-drawer` panel
  * and the mobile `v-bottom-sheet` panel within `MapView`.
@@ -14,23 +14,19 @@
  * <ShopCard :shop="mapStore.selectedShop" />
  * ```
  */
-import type { YelpBusiness } from '@/types/yelp'
+import { computed } from 'vue'
+import type { MapboxTacoShop } from '@/types/mapbox'
 
-/**
- * Props accepted by the ShopCard component.
- */
 const props = defineProps<{
   /**
-   * The Yelp business object to render. Must be a fully-hydrated
-   * `YelpBusiness` record returned by the Yelp proxy endpoint.
+   * The Mapbox POI to render. Must be a fully-hydrated `MapboxTacoShop`
+   * record returned by the Mapbox Search Box API.
    */
-  shop: YelpBusiness
+  shop: MapboxTacoShop
 }>()
 
 /**
- * Pool of humorous taco-themed taglines.
- * One is randomly selected on each component mount to give each
- * shop card a unique, fun personality without requiring external data.
+ * Pool of humorous taco-themed taglines. One is randomly selected on mount.
  */
 const quips = [
   'This place slaps harder than a late-night craving.',
@@ -45,32 +41,30 @@ const quips = [
   'Five out of five tacos. Would recommend. Again and again.',
 ]
 
-/**
- * A randomly selected tagline from the `quips` pool.
- * Evaluated once at component setup time — stays stable for the lifetime
- * of this card instance.
- */
 const tagline = quips[Math.floor(Math.random() * quips.length)]
 
 /**
- * The shop's full street address as a single comma-separated string,
- * derived by joining the `display_address` array from the Yelp API response.
- *
- * @example "123 SE Burnside St, Portland, OR 97214"
+ * Converts a Mapbox category slug (e.g. `"mexican_restaurant"`) into a
+ * human-readable label (e.g. `"Mexican Restaurant"`).
  */
-const address = props.shop.location.display_address.join(', ')
+function formatCategory(slug: string): string {
+  return slug
+    .split('_')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/**
+ * Google Maps directions deep-link targeting this shop's coordinates.
+ */
+const directionsUrl = computed(() => {
+  const { latitude, longitude } = props.shop.coordinates
+  return `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
+})
 </script>
 
 <template>
   <v-card color="surface" class="shop-card" rounded="lg">
-    <v-img
-      v-if="shop.image_url"
-      :src="shop.image_url"
-      :alt="`Photo of ${shop.name}`"
-      height="180"
-      cover
-    />
-
     <v-card-title class="text-h6 pt-4 pb-1" style="white-space: normal">
       {{ shop.name }}
     </v-card-title>
@@ -80,48 +74,23 @@ const address = props.shop.location.display_address.join(', ')
     </v-card-subtitle>
 
     <v-card-text class="pb-2">
-      <!-- Rating -->
-      <div class="d-flex align-center ga-2 mb-2">
-        <v-rating
-          :model-value="shop.rating"
-          readonly
-          half-increments
-          density="compact"
-          color="secondary"
-          active-color="secondary"
-          aria-label="Shop rating"
-        />
-        <span class="text-body-2 text-medium-emphasis">
-          ({{ shop.review_count }} reviews)
-        </span>
-      </div>
-
       <!-- Address -->
-      <div class="d-flex align-start ga-2 mb-3">
+      <div v-if="shop.full_address" class="d-flex align-start ga-2 mb-3">
         <v-icon size="small" color="accent" aria-hidden="true">mdi-map-marker</v-icon>
-        <span class="text-body-2">{{ address }}</span>
+        <span class="text-body-2">{{ shop.full_address }}</span>
       </div>
 
-      <!-- Price + Categories -->
-      <div class="d-flex flex-wrap ga-1">
-        <v-chip
-          v-if="shop.price"
-          size="small"
-          color="primary"
-          variant="tonal"
-          aria-label="`Price range: ${shop.price}`"
-        >
-          {{ shop.price }}
-        </v-chip>
+      <!-- Categories -->
+      <div v-if="shop.categories.length" class="d-flex flex-wrap ga-1">
         <v-chip
           v-for="category in shop.categories"
-          :key="category.alias"
+          :key="category"
           size="small"
           color="accent"
           variant="tonal"
-          :aria-label="`Category: ${category.title}`"
+          :aria-label="`Category: ${formatCategory(category)}`"
         >
-          {{ category.title }}
+          {{ formatCategory(category) }}
         </v-chip>
       </div>
     </v-card-text>
@@ -130,13 +99,13 @@ const address = props.shop.location.display_address.join(', ')
       <v-btn
         variant="outlined"
         color="primary"
-        :href="shop.url"
+        :href="directionsUrl"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="View on Yelp"
+        aria-label="Get directions"
       >
-        View on Yelp
-        <v-icon end aria-hidden="true">mdi-open-in-new</v-icon>
+        Get Directions
+        <v-icon end aria-hidden="true">mdi-directions</v-icon>
       </v-btn>
     </v-card-actions>
   </v-card>

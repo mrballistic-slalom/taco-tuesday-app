@@ -5,20 +5,17 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import ShopCard from '@/components/map/ShopCard.vue'
-import type { YelpBusiness } from '@/types/yelp'
+import type { MapboxTacoShop } from '@/types/mapbox'
 
 const vuetify = createVuetify({ components, directives })
 
-const mockShop: YelpBusiness = {
-  id: '1',
+const mockShop: MapboxTacoShop = {
+  id: 'abc',
   name: 'Taco Paradise',
-  rating: 4.5,
-  review_count: 200,
-  price: '$$',
-  location: { display_address: ['123 Taco St', 'Portland, OR'] },
+  full_address: '123 Taco St, Portland, OR',
   coordinates: { latitude: 45.52, longitude: -122.68 },
-  categories: [{ alias: 'tacos', title: 'Tacos' }],
-  url: 'https://yelp.com/biz/taco-paradise',
+  categories: ['restaurant', 'mexican_restaurant'],
+  maki: 'restaurant',
 }
 
 let wrapper: VueWrapper
@@ -42,64 +39,50 @@ it('renders shop name', () => {
   expect(wrapper.text()).toContain('Taco Paradise')
 })
 
-it('renders address', () => {
+it('renders full address', () => {
   wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
-  expect(wrapper.text()).toContain('123 Taco St')
+  expect(wrapper.text()).toContain('123 Taco St, Portland, OR')
 })
 
-it('renders Yelp link with correct href', () => {
+it('renders Get Directions link with Google Maps directions URL', () => {
   wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
-  const link = wrapper.find('a[href="https://yelp.com/biz/taco-paradise"]')
+  const link = wrapper.find('a[href*="google.com/maps/dir"]')
   expect(link.exists()).toBe(true)
+  const href = link.attributes('href') ?? ''
+  expect(href).toContain('destination=45.52,-122.68')
 })
 
-it('renders price chip', () => {
+it('renders human-readable category chips from underscore slugs', () => {
   wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
-  expect(wrapper.text()).toContain('$$')
+  expect(wrapper.text()).toContain('Mexican Restaurant')
+  expect(wrapper.text()).toContain('Restaurant')
 })
 
-it('renders category chip', () => {
+it('renders Get Directions button with correct aria-label', () => {
   wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop },
   })
-  expect(wrapper.text()).toContain('Tacos')
-})
-
-it('renders review count', () => {
-  wrapper = mount(ShopCard, {
-    global: { plugins: [vuetify, createPinia()] },
-    props: { shop: mockShop },
-  })
-  expect(wrapper.text()).toContain('200 reviews')
-})
-
-it('renders View on Yelp button with correct aria-label', () => {
-  wrapper = mount(ShopCard, {
-    global: { plugins: [vuetify, createPinia()] },
-    props: { shop: mockShop },
-  })
-  const btn = wrapper.find('[aria-label="View on Yelp"]')
+  const btn = wrapper.find('[aria-label="Get directions"]')
   expect(btn.exists()).toBe(true)
 })
 
-it('does not render price chip when price is undefined', () => {
-  const shopWithoutPrice: YelpBusiness = { ...mockShop, price: undefined }
+it('omits address row when full_address is empty', () => {
+  const shop: MapboxTacoShop = { ...mockShop, full_address: '' }
   wrapper = mount(ShopCard, {
     global: { plugins: [vuetify, createPinia()] },
-    props: { shop: shopWithoutPrice },
+    props: { shop },
   })
-  expect(wrapper.text()).toContain('Taco Paradise')
-  expect(wrapper.text()).not.toContain('$$')
+  expect(wrapper.text()).not.toContain('123 Taco St')
 })
 
 it('renders a random tagline', () => {

@@ -146,7 +146,7 @@ onUnmounted(() => {
         </v-snackbar>
       </div>
       <div v-else-if="!tuesdayStore.hasSpots" class="text-center pa-8">
-        <p>Yelp has no idea. Go find your own Tuesday tacos. 🕵️</p>
+        <p>The map's coming up empty. Go find your own Tuesday tacos. 🕵️</p>
       </div>
       <div v-else>
         <TuesdayShopCard

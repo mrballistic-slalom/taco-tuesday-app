@@ -1,11 +1,11 @@
 import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import type { YelpBusiness } from '@/types/yelp'
+import type { MapboxTacoShop } from '@/types/mapbox'
 
 const mockSearchTacoTuesdayShops = vi.fn()
 
-vi.mock('@/composables/useYelp', () => ({
-  useYelp: () => ({
+vi.mock('@/composables/useMapbox', () => ({
+  useMapbox: () => ({
     searchTacoShops: vi.fn(),
     searchTacoTuesdayShops: mockSearchTacoTuesdayShops,
   }),
@@ -13,15 +13,12 @@ vi.mock('@/composables/useYelp', () => ({
 
 import { useTuesdayStore } from '@/stores/tuesdayStore'
 
-const mockBusiness: YelpBusiness = {
-  id: '1',
+const mockShop: MapboxTacoShop = {
+  id: 'abc',
   name: 'Taco Paradise',
-  rating: 4.5,
-  review_count: 200,
-  location: { display_address: ['123 Taco St'] },
+  full_address: '123 Taco St, Portland, OR',
   coordinates: { latitude: 45.52, longitude: -122.68 },
-  categories: [{ alias: 'tacos', title: 'Tacos' }],
-  url: 'https://yelp.com/biz/taco-paradise',
+  categories: ['restaurant'],
 }
 
 describe('tuesdayStore', () => {
@@ -32,12 +29,12 @@ describe('tuesdayStore', () => {
 
   describe('fetchSpots', () => {
     it('sets spots and hasSpots is true on success', async () => {
-      mockSearchTacoTuesdayShops.mockResolvedValueOnce([mockBusiness])
+      mockSearchTacoTuesdayShops.mockResolvedValueOnce([mockShop])
 
       const store = useTuesdayStore()
       await store.fetchSpots(45.52, -122.68)
 
-      expect(store.spots).toEqual([mockBusiness])
+      expect(store.spots).toEqual([mockShop])
       expect(store.hasSpots).toBe(true)
       expect(store.loading).toBe(false)
       expect(store.error).toBeNull()
@@ -69,11 +66,11 @@ describe('tuesdayStore', () => {
 
   describe('clear', () => {
     it('resets spots and error', async () => {
-      mockSearchTacoTuesdayShops.mockResolvedValueOnce([mockBusiness])
+      mockSearchTacoTuesdayShops.mockResolvedValueOnce([mockShop])
 
       const store = useTuesdayStore()
       await store.fetchSpots(45.52, -122.68)
-      expect(store.spots).toEqual([mockBusiness])
+      expect(store.spots).toEqual([mockShop])
 
       store.clear()
       expect(store.spots).toEqual([])

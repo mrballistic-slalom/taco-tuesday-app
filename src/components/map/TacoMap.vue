@@ -2,16 +2,16 @@
 /**
  * TacoMap component.
  *
- * Renders a full-viewport Mapbox GL JS map (dark-v11 style) with 3D building
+ * Renders a full-viewport Mapbox GL JS map (light-v11 style) with 3D building
  * extrusions and custom taco-emoji markers for every taco shop returned by the
- * Yelp proxy. On mount it:
+ * Mapbox Search Box API. On mount it:
  *   1. Initialises the map centred on Portland, OR (the fallback location).
  *   2. Adds the 3D-buildings fill-extrusion layer once tiles have loaded.
  *   3. Requests the user's geolocation; on success flies to their position and
  *      fetches nearby shops; on failure falls back silently to Portland.
  *
- * Each marker is a keyboard-accessible 32×32 px circular badge containing the
- * taco emoji. Clicking or pressing Enter on a marker calls
+ * Each marker is a keyboard-accessible 32×32 px taco-orange circular badge
+ * containing the 🌮 emoji. Clicking or pressing Enter on a marker calls
  * `mapStore.selectShop()` and flies the camera to that shop at zoom 15 /
  * pitch 60. The marker layer is rebuilt reactively whenever `mapStore.shops`
  * changes.
@@ -28,7 +28,7 @@ import mapboxgl from 'mapbox-gl'
 import { shallowRef, watch, onMounted, onUnmounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { useGeolocation } from '@/composables/useGeolocation'
-import type { YelpBusiness } from '@/types/yelp'
+import type { MapboxTacoShop } from '@/types/mapbox'
 
 /** Pinia store that owns the list of taco shops and the currently selected one. */
 const mapStore = useMapStore()
@@ -89,20 +89,21 @@ function clearMarkers() {
  * addMarkers(mapStore.shops)
  * ```
  */
-function addMarkers(shops: YelpBusiness[]) {
+function addMarkers(shops: MapboxTacoShop[]) {
   clearMarkers()
-  shops.forEach((shop: YelpBusiness) => {
+  shops.forEach((shop: MapboxTacoShop) => {
     const el = document.createElement('div')
     el.innerHTML = '🌮'
     el.style.width = '32px'
     el.style.height = '32px'
-    el.style.background = 'white'
+    el.style.background = '#FF6B35'
+    el.style.border = '2px solid white'
     el.style.borderRadius = '50%'
     el.style.display = 'flex'
     el.style.alignItems = 'center'
     el.style.justifyContent = 'center'
     el.style.cursor = 'pointer'
-    el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'
+    el.style.boxShadow = '0 2px 6px rgba(0,0,0,0.25)'
     el.style.fontSize = '16px'
     el.tabIndex = 0
     el.setAttribute('aria-label', `Taco shop: ${shop.name}`)
@@ -162,7 +163,7 @@ onMounted(() => {
 
   map.value = new mapboxgl.Map({
     container: 'map',
-    style: 'mapbox://styles/mapbox/dark-v11',
+    style: 'mapbox://styles/mapbox/light-v11',
     zoom: 14,
     pitch: 45,
     bearing: 0,
@@ -176,9 +177,9 @@ onMounted(() => {
       'source-layer': 'building',
       type: 'fill-extrusion',
       paint: {
-        'fill-extrusion-color': '#aaa',
+        'fill-extrusion-color': '#c8c8c8',
         'fill-extrusion-height': ['get', 'height'],
-        'fill-extrusion-opacity': 0.6,
+        'fill-extrusion-opacity': 0.7,
       },
     })
   })

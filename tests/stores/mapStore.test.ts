@@ -1,11 +1,11 @@
 import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import type { YelpBusiness } from '@/types/yelp'
+import type { MapboxTacoShop } from '@/types/mapbox'
 
 const mockSearchTacoShops = vi.fn()
 
-vi.mock('@/composables/useYelp', () => ({
-  useYelp: () => ({
+vi.mock('@/composables/useMapbox', () => ({
+  useMapbox: () => ({
     searchTacoShops: mockSearchTacoShops,
     searchTacoTuesdayShops: vi.fn(),
   }),
@@ -13,15 +13,13 @@ vi.mock('@/composables/useYelp', () => ({
 
 import { useMapStore } from '@/stores/mapStore'
 
-const mockBusiness: YelpBusiness = {
-  id: '1',
+const mockShop: MapboxTacoShop = {
+  id: 'abc',
   name: 'Taco Paradise',
-  rating: 4.5,
-  review_count: 200,
-  location: { display_address: ['123 Taco St'] },
+  full_address: '123 Taco St, Portland, OR',
   coordinates: { latitude: 45.52, longitude: -122.68 },
-  categories: [{ alias: 'tacos', title: 'Tacos' }],
-  url: 'https://yelp.com/biz/taco-paradise',
+  categories: ['restaurant', 'mexican_restaurant'],
+  maki: 'restaurant',
 }
 
 describe('mapStore', () => {
@@ -32,12 +30,12 @@ describe('mapStore', () => {
 
   describe('fetchShops', () => {
     it('sets shops on success and clears loading and error', async () => {
-      mockSearchTacoShops.mockResolvedValueOnce([mockBusiness])
+      mockSearchTacoShops.mockResolvedValueOnce([mockShop])
 
       const store = useMapStore()
       await store.fetchShops(45.52, -122.68)
 
-      expect(store.shops).toEqual([mockBusiness])
+      expect(store.shops).toEqual([mockShop])
       expect(store.loading).toBe(false)
       expect(store.error).toBeNull()
     })
@@ -57,15 +55,15 @@ describe('mapStore', () => {
   describe('selectShop', () => {
     it('sets selectedShop', () => {
       const store = useMapStore()
-      store.selectShop(mockBusiness)
-      expect(store.selectedShop).toEqual(mockBusiness)
+      store.selectShop(mockShop)
+      expect(store.selectedShop).toEqual(mockShop)
     })
   })
 
   describe('clearSelection', () => {
     it('sets selectedShop to null', () => {
       const store = useMapStore()
-      store.selectShop(mockBusiness)
+      store.selectShop(mockShop)
       store.clearSelection()
       expect(store.selectedShop).toBeNull()
     })

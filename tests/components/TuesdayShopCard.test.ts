@@ -5,20 +5,16 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { createPinia, setActivePinia } from 'pinia'
 import TuesdayShopCard from '@/components/tuesday/TuesdayShopCard.vue'
-import type { YelpBusiness } from '@/types/yelp'
+import type { MapboxTacoShop } from '@/types/mapbox'
 
 const vuetify = createVuetify({ components, directives })
 
-const mockShop: YelpBusiness = {
-  id: '1',
+const mockShop: MapboxTacoShop = {
+  id: 'abc',
   name: 'Tuesday Taco Spot',
-  rating: 4.8,
-  review_count: 350,
-  price: '$',
-  location: { display_address: ['456 Taco Ave', 'Portland, OR'] },
+  full_address: '456 Taco Ave, Portland, OR',
   coordinates: { latitude: 45.52, longitude: -122.68 },
-  categories: [{ alias: 'tacos', title: 'Tacos' }],
-  url: 'https://yelp.com/biz/tuesday-taco-spot',
+  categories: ['mexican_restaurant'],
 }
 
 let wrapper: VueWrapper
@@ -74,13 +70,15 @@ it('renders numeric badge for rank 4+', () => {
   expect(wrapper.text()).toContain('#4')
 })
 
-it('renders Yelp link', () => {
+it('renders Get Directions link with Google Maps directions URL', () => {
   wrapper = mount(TuesdayShopCard, {
     global: { plugins: [vuetify, createPinia()] },
     props: { shop: mockShop, rank: 1 },
   })
-  const link = wrapper.find('[href="https://yelp.com/biz/tuesday-taco-spot"]')
+  const link = wrapper.find('a[href*="google.com/maps/dir"]')
   expect(link.exists()).toBe(true)
+  const href = link.attributes('href') ?? ''
+  expect(href).toContain('destination=45.52,-122.68')
 })
 
 it('renders address', () => {
