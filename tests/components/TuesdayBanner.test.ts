@@ -13,10 +13,11 @@ beforeEach(() => {
 })
 afterEach(() => vi.useRealTimers())
 
-it('renders "Come Back on Tuesday"', () => {
-  vi.setSystemTime(new Date('2024-01-08T12:00:00')) // Monday
+it('renders proximity-aware countdown copy on a Monday', () => {
+  vi.setSystemTime(new Date('2024-01-08T12:00:00')) // Monday — 1 day until Tuesday
   const wrapper = mount(TuesdayBanner, { global: { plugins: [vuetify, createPinia()] } })
-  expect(wrapper.text()).toContain('Come Back on Tuesday')
+  expect(wrapper.text()).toContain('Almost there')
+  expect(wrapper.text()).toContain('Tomorrow we feast')
 })
 
 it('shows days until Tuesday on a Monday', () => {
@@ -37,10 +38,10 @@ it('shows 7 days when it is already Tuesday', () => {
   expect(wrapper.text()).toContain('7')
 })
 
-it('renders the Tacos are coming message', () => {
+it('renders the "Until the next Taco Tuesday" subtitle', () => {
   vi.setSystemTime(new Date('2024-01-08T12:00:00'))
   const wrapper = mount(TuesdayBanner, { global: { plugins: [vuetify, createPinia()] } })
-  expect(wrapper.text()).toContain('Tacos are coming')
+  expect(wrapper.text()).toContain('Until the next Taco Tuesday')
 })
 
 it('shows correct days on a Wednesday (6 days until Tuesday)', () => {

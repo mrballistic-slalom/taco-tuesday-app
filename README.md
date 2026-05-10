@@ -1,6 +1,6 @@
 # 🌮 Tacology
 
-A fun, taco-obsessed web app built with Vue 3, TypeScript, and Vuetify 3. Find taco spots near you, browse recipes, spin a randomizer wheel, and celebrate Taco Tuesday in style.
+A taco-obsessed Vue 3 app with a cantina-at-golden-hour design language: glassmorphism panels floating over a warm sunset gradient, taco-emoji map pins, and an animated papel-picado strip on Taco Tuesday. Find taco joints near you, browse recipes, spin the wheel, and celebrate the holiest day of the week.
 
 **Live app:** [https://ccc-demo-eight.vercel.app](https://ccc-demo-eight.vercel.app)
 
@@ -10,25 +10,36 @@ A fun, taco-obsessed web app built with Vue 3, TypeScript, and Vuetify 3. Find t
 
 | View | What it does |
 |------|-------------|
-| **Find Tacos** (`/map`) | Mapbox GL 3D map pinpointing nearby taco shops via the Yelp Fusion API. Click a pin to see ratings, address, and a random quip. |
-| **Recipes** (`/recipes`) | Search thousands of taco recipes via Spoonacular. Click any card to open a full recipe modal with an ingredient checklist and step-by-step instructions. |
-| **Spin It** (`/randomizer`) | Canvas spin wheel with 12 taco types. Land on one and get a randomly matched recipe result. |
-| **Taco Tuesday** (`/tuesday`) | On Tuesdays: full fiesta mode with animated confetti, cycling brand colors, and a ranked list of nearby Taco Tuesday spots. Any other day: a countdown to next Tuesday. |
+| **Find Tacos** (`/map`) | Mapbox GL 3D map (streets-v12, softened to a faded-postcard look). Taco-emoji pins drop in, hover to glow, click to slide a glass detail card in from the edge. Pan the map and a "Search this area" pill rises up — tap to re-fetch nearby spots at the new center. |
+| **Recipes** (`/recipes`) | Search hundreds of taco recipes via Spoonacular. Click any card to open a recipe modal with image, ingredient list, and step-by-step instructions. |
+| **Spin It** (`/randomizer`) | Canvas spin wheel with 8 taco types (the four that always 404 against the recipe API have been retired). Land on one and the result links straight to the source recipe — no in-between modal. |
+| **Taco Tuesday** (`/tuesday`) | On Tuesdays: papel-picado banner across the top, gradient-text hero, bobbing taco/avocado/chili emoji row, mixed confetti rain (🌮 🥑 🌶️ alongside rectangles), and a ranked list of nearby Tuesday spots with a "Today's Champion" glow on #1. Any other day: a dynamic countdown card that adapts copy as Tuesday gets closer ("Tomorrow we feast", "Two sleeps to tacos", …) plus a progress bar with a riding 🌮. |
 
 ---
 
 ## Stack
 
-- **Vue 3** — `<script setup>` Composition API throughout, strict TypeScript
-- **Vuetify 3** — Custom dark taco theme (primary: `#FF6B35`)
-- **Vite 6** — Fast dev server and production bundler
+- **Vue 3** — `<script setup>` Composition API, strict TypeScript
+- **Vuetify 3** — Component primitives + custom "Mercado Glass" theme
+- **Vite 6** — Dev server and production bundler
 - **Vue Router 4** — Hash-based routing (no server config needed)
 - **Pinia** — One store per feature domain
 - **Mapbox GL JS v3** — 3D map with building extrusions
-- **Spoonacular** — Recipe API with thousands of taco recipes, proxied server-side
-- **Yelp Fusion API** — Proxied via Vercel Edge Function (key stays server-side)
-- **Vitest** — Unit tests with v8 coverage (80% threshold enforced)
+- **Mapbox Search Box API** — POI search, called direct from the browser (CORS-friendly, uses the publishable map token)
+- **Spoonacular** — Recipe API, proxied server-side
+- **Vercel Analytics** — Pageviews + custom events via `@vercel/analytics/vue`
+- **Vitest** — 83 unit tests with v8 coverage (80% threshold enforced)
 - **GitHub Actions** — CI: lint → type-check → test → build
+
+---
+
+## Design language
+
+The whole app sits on top of a fixed CSS gradient — deep mole → oxblood → terracotta → marigold — with a subtle film-grain overlay. Chrome surfaces (the sidebar, the count pill, the floating shop card) are translucent glass panels with `backdrop-filter: blur`, picking up the warm gradient through their frosted layers. The map is desaturated and slightly sepia-tinted so it blends with the palette instead of fighting it.
+
+Type: **Yatra One** (hand-painted cantina signage feel) for hero headlines, logo, and shop names; **Nunito** for body. Motion is reserved for high-impact moments: pin drop-ins, the Tuesday hero gradient pulse, the papel-picado sway, the count pill's slide-in. Everything respects `prefers-reduced-motion`.
+
+CSS variables exposed on `:root` (in `App.vue`) for reuse: `--glass-bg`, `--glass-bg-strong`, `--glass-border`, `--glass-blur`, `--glass-shadow`, plus accent ramps `--taco-orange`, `--taco-marigold`, `--taco-cilantro`, `--taco-salsa`, `--taco-bone`.
 
 ---
 
@@ -37,8 +48,7 @@ A fun, taco-obsessed web app built with Vue 3, TypeScript, and Vuetify 3. Find t
 ### Prerequisites
 
 - Node.js 20+
-- A [Mapbox](https://mapbox.com) access token (free tier works)
-- A [Yelp Fusion](https://docs.developer.yelp.com/) API key (free)
+- A [Mapbox](https://mapbox.com) access token (free tier works) — used for both the map tiles AND the Search Box POI calls, so it does need to be a publishable `pk.*` token with `mapbox:streets`, `mapbox:terrain`, and search scopes enabled
 - A [Spoonacular](https://spoonacular.com/food-api) API key (free tier: 150 req/day)
 
 ### Install
@@ -51,37 +61,29 @@ npm install
 
 ### Environment variables
 
-Copy the example file and fill in your keys:
-
 ```bash
 cp .env.example .env
 ```
 
 ```env
-# Exposed to the browser (safe — Mapbox tokens are restricted by domain)
+# Mapbox publishable token — safe to expose to the browser. Locks down via
+# Mapbox's URL allowlist (set both your prod hostname AND http://localhost:5173).
 VITE_MAPBOX_TOKEN=your_mapbox_token_here
 
-# Server-side only — never prefix with VITE_
-YELP_API_KEY=your_yelp_bearer_token_here
+# Spoonacular API key — SERVER SIDE ONLY, never prefix with VITE_
 SPOONACULAR_API_KEY=your_spoonacular_api_key_here
 ```
 
-> **Note:** `YELP_API_KEY` and `SPOONACULAR_API_KEY` must NOT have the `VITE_` prefix. They are only used inside Vercel Edge Functions (`api/yelp.ts`, `api/spoonacular.ts`) and are never included in the browser bundle.
+> **Note:** `SPOONACULAR_API_KEY` must not have the `VITE_` prefix — it is only consumed by the Vercel Edge Function at `api/spoonacular.ts` and never makes it into the browser bundle. The Mapbox token is intentionally exposed; the security boundary there is the URL allowlist you configure at `account.mapbox.com`.
 
 ### Run locally
 
 ```bash
-npm run dev
+npm run dev          # plain Vite — only Mapbox features work
+vercel dev           # full stack — Spoonacular proxy + Vite together
 ```
 
 The app will be available at `http://localhost:5173`.
-
-For the Yelp proxy to work locally you'll need the [Vercel CLI](https://vercel.com/docs/cli):
-
-```bash
-npm i -g vercel
-vercel dev   # runs both the Vite dev server and the Edge Function
-```
 
 ---
 
@@ -104,63 +106,64 @@ vercel dev   # runs both the Vite dev server and the Edge Function
 ```
 src/
 ├── components/
-│   ├── AppNav.vue              # Responsive nav (drawer on desktop, bottom bar on mobile)
+│   ├── AppNav.vue              # Glass-frosted nav (drawer on desktop, bottom bar on mobile)
 │   ├── map/
-│   │   ├── TacoMap.vue         # Mapbox GL map with taco-emoji markers
-│   │   └── ShopCard.vue        # Yelp shop detail panel
+│   │   ├── TacoMap.vue         # Mapbox GL map; emits `userMove` when user pans/zooms
+│   │   └── ShopCard.vue        # Floating warm-glass detail card
 │   ├── randomizer/
-│   │   ├── SpinWheel.vue       # Canvas spin wheel (12 taco types)
-│   │   └── TacoResult.vue      # Result card after spin
+│   │   ├── SpinWheel.vue       # Canvas wheel (8 taco types)
+│   │   └── TacoResult.vue      # Spin result — links directly to recipe sourceUrl
 │   ├── recipes/
-│   │   ├── RecipeCard.vue      # Grid card for a single meal
-│   │   ├── RecipeGrid.vue      # Responsive grid of RecipeCards
-│   │   └── RecipeModal.vue     # Full recipe dialog with ingredient checklist
+│   │   ├── RecipeCard.vue
+│   │   ├── RecipeGrid.vue
+│   │   └── RecipeModal.vue
 │   └── tuesday/
-│       ├── TuesdayBanner.vue   # Non-Tuesday countdown banner
-│       ├── TuesdayShopCard.vue # Ranked Yelp shop card for Tuesday view
-│       └── FiestaOverlay.vue   # 80-confetti particle overlay (respects prefers-reduced-motion)
+│       ├── TuesdayBanner.vue   # Non-Tuesday countdown card (proximity-aware copy)
+│       ├── TuesdayShopCard.vue # Ranked card; #1 gets "Today's Champion" glow
+│       └── FiestaOverlay.vue   # Mixed-emoji confetti rain (80 pieces, respects reduced-motion)
 ├── composables/
 │   ├── useFiestaMode.ts        # isActive flag (true on Tuesdays)
 │   ├── useGeolocation.ts       # navigator.geolocation wrapper, falls back to Portland
-│   ├── useMealDB.ts            # TheMealDB API calls
-│   ├── useTuesdayCheck.ts      # isTuesday computed (getDay() === 2)
-│   └── useYelp.ts              # Yelp proxy calls via /api/yelp
+│   ├── useMapbox.ts            # Mapbox Search Box /forward — browser-direct, CORS-friendly
+│   ├── useMealDB.ts
+│   ├── useSpoonacular.ts
+│   └── useTuesdayCheck.ts
 ├── stores/
-│   ├── mapStore.ts             # Yelp shops + selected shop state
-│   ├── randomizerStore.ts      # Spin state + meal result
-│   ├── recipeStore.ts          # Recipe search + selected recipe
-│   └── tuesdayStore.ts         # Tuesday Yelp spots
+│   ├── mapStore.ts             # MapboxTacoShop[] + selected shop
+│   ├── randomizerStore.ts      # Spin state + recipe result
+│   ├── recipeStore.ts
+│   └── tuesdayStore.ts
+├── types/
+│   ├── mapbox.ts               # MapboxTacoShop + Search Box response shapes
+│   ├── mealdb.ts
+│   └── spoonacular.ts
 ├── views/
-│   ├── MapView.vue
+│   ├── MapView.vue             # Full-viewport map + glass count pill + "Search this area"
 │   ├── RandomizerView.vue
 │   ├── RecipesView.vue
-│   └── TuesdayView.vue
-├── types/
-│   ├── mealdb.ts               # Meal, MealDBResponse, ParsedIngredient
-│   └── yelp.ts                 # YelpBusiness, YelpSearchResponse
-├── plugins/vuetify.ts          # Vuetify theme + icon config
-├── router/index.ts             # Hash-history routes
-└── main.ts                     # App entry point
+│   └── TuesdayView.vue         # Papel-picado strip + animated hero + champion list
+├── plugins/vuetify.ts          # "Mercado Glass" theme
+├── App.vue                     # Body gradient + grain + glass utility tokens
+├── router/index.ts
+└── main.ts
 api/
-├── spoonacular.ts              # Vercel Edge Function — Spoonacular proxy
-└── yelp.ts                     # Vercel Edge Function — Yelp proxy
+└── spoonacular.ts              # Vercel Edge Function — Spoonacular proxy
 ```
 
 ---
 
 ## Deployment
 
-The app is deployed to Vercel from the `main` branch.
+The app deploys to Vercel from the `main` branch.
 
 Set these environment variables in **Vercel Dashboard → Project → Settings → Environment Variables**:
 
 | Variable | Scope | Description |
 |----------|-------|-------------|
-| `VITE_MAPBOX_TOKEN` | All environments | Mapbox GL access token |
-| `YELP_API_KEY` | All environments | Yelp Fusion Bearer token (server-side only) |
+| `VITE_MAPBOX_TOKEN` | All environments | Mapbox publishable token (also used for Search Box POI lookups) |
 | `SPOONACULAR_API_KEY` | All environments | Spoonacular API key (server-side only) |
 
-After adding the variables, trigger a redeploy so the build picks up `VITE_MAPBOX_TOKEN`.
+After adding the variables, trigger a redeploy so the build picks them up. Don't forget to add your production hostname (and any preview hostname you care about) to the **Mapbox URL allowlist** at `account.mapbox.com` — without it, every tile and search call 403s.
 
 ---
 

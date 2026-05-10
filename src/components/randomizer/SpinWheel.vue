@@ -26,9 +26,11 @@
  *
  * An interactive prize wheel rendered on an HTML5 Canvas element (340×340px,
  * scaled down responsively via `max-width: 100%`). The wheel is divided into
- * 12 equal segments, one for each taco type in `TACO_TYPES`. Each segment is
+ * equal segments, one for each taco type in `TACO_TYPES`. Each segment is
  * filled with a warm/vibrant colour from `COLORS` and labelled with the taco
- * type name in white bold text.
+ * type name in white bold text. Taco types are pre-filtered to those that
+ * have at least one matching recipe in TheMealDB — picks that always fail
+ * (Lengua, Barbacoa, Carne Asada) are intentionally excluded.
  *
  * A downward-pointing triangle (taco orange, `#FF6B35`) is drawn at the top
  * centre of the canvas as a fixed pointer. A small dark circle is drawn at the
@@ -61,7 +63,7 @@ import { useRandomizerStore } from '@/stores/randomizerStore'
  *   TheMealDB for a matching recipe.
  *
  * @param tacoType - The label of the winning wheel segment, e.g. `"Al Pastor"`,
- *   `"Birria"`, `"Fish Taco"`, etc. Always one of the 12 strings in `TACO_TYPES`.
+ *   `"Birria"`, `"Fish Taco"`, etc. Always one of the strings in `TACO_TYPES`.
  */
 const emit = defineEmits<{
   (e: 'spin-complete', tacoType: string): void
@@ -76,46 +78,39 @@ const emit = defineEmits<{
 const randomizerStore = useRandomizerStore()
 
 /**
- * The 12 taco type labels, one per wheel segment. The order determines the
- * visual layout of segments starting from angle 0 (3 o'clock position) and
- * proceeding clockwise. Changing this array also changes which segment wins for
- * a given final rotation value.
+ * Taco type labels, one per wheel segment. Order sets the visual layout
+ * starting from angle 0 (3 o'clock position) and proceeding clockwise.
+ *
+ * Birria, Lengua, Barbacoa, and Carne Asada are intentionally absent:
+ * TheMealDB has no recipes matching those queries, so spinning to one of
+ * them would always land on the "no result" error state.
  */
 const TACO_TYPES = [
   'Al Pastor',
   'Carnitas',
-  'Birria',
   'Fish Taco',
-  'Carne Asada',
   'Veggie',
   'Chicken Tinga',
-  'Barbacoa',
   'Shrimp',
   'Chorizo',
-  'Lengua',
   'Potato',
 ]
 
 /**
- * Warm/vibrant fill colours assigned to wheel segments in order. There are 12
- * colours matching the 12 taco types; the modulo fallback (`i % COLORS.length`)
- * is a safety measure in case the two arrays ever get out of sync. All colours
- * are oranges, reds, yellows — no muted or cool tones — to create a lively,
- * appetising look consistent with the Tacology brand.
+ * Warm/vibrant fill colours assigned to wheel segments in order. The modulo
+ * fallback (`i % COLORS.length`) keeps things safe if the two arrays ever
+ * drift apart. All colours are oranges, reds, yellows — no muted or cool
+ * tones — for a lively, appetising look consistent with the Tacology brand.
  */
 const COLORS = [
   '#FF6B35',
   '#FFD166',
   '#FF4757',
   '#FFA502',
-  '#ECCC68',
   '#FF6348',
   '#FF7F50',
   '#FFD700',
-  '#FF6B81',
-  '#FFBC00',
   '#FF8C00',
-  '#FFC300',
 ]
 
 /**

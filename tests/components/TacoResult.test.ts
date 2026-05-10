@@ -13,6 +13,7 @@ const mockRecipe: SpoonacularRecipe = {
   id: 1,
   title: 'Al Pastor Tacos',
   image: 'https://example.com/thumb.jpg',
+  sourceUrl: 'https://example.com/recipes/al-pastor-tacos',
 }
 
 let wrapper: VueWrapper
@@ -52,17 +53,25 @@ it('renders "SPIN AGAIN" button', () => {
   expect(wrapper.text()).toContain('SPIN AGAIN')
 })
 
-it('emits view-recipe on button click', async () => {
+it('renders "View Full Recipe" as a direct link to recipe.sourceUrl', () => {
   wrapper = mount(TacoResult, {
     global: { plugins: [vuetify, createPinia()] },
     props: { recipe: mockRecipe },
   })
-  const btns = wrapper.findAll('button')
-  const viewBtn = btns.find((b) => b.text().includes('View Full Recipe'))
-  if (viewBtn) {
-    await viewBtn.trigger('click')
-    expect(wrapper.emitted('view-recipe')).toBeTruthy()
-  }
+  const link = wrapper.find('a[href="https://example.com/recipes/al-pastor-tacos"]')
+  expect(link.exists()).toBe(true)
+  expect(link.attributes('target')).toBe('_blank')
+  expect(link.text()).toContain('View Full Recipe')
+})
+
+it('hides "View Full Recipe" when recipe.sourceUrl is missing', () => {
+  const recipeWithoutUrl: SpoonacularRecipe = { ...mockRecipe, sourceUrl: undefined }
+  wrapper = mount(TacoResult, {
+    global: { plugins: [vuetify, createPinia()] },
+    props: { recipe: recipeWithoutUrl },
+  })
+  expect(wrapper.text()).not.toContain('View Full Recipe')
+  expect(wrapper.text()).toContain('SPIN AGAIN')
 })
 
 it('emits spin-again on button click', async () => {

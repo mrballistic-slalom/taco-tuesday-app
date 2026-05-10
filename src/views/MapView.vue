@@ -2,191 +2,146 @@
 /**
  * MapView — the `/map` route view.
  *
- * Renders a full-viewport interactive taco-shop map alongside contextual UI
- * panels that adapt to the current breakpoint:
+ * The map container is fixed to the full viewport so the glass-frosted nav
+ * (left on desktop, bottom on mobile) blurs over it as a single unbroken
+ * canvas. A slim glass "count pill" sits top-center: it shows a "finding
+ * spots…" state during loading and switches to "🌮 N spots near you" once
+ * `mapStore.shops` resolves.
  *
- * - **Map layer**: `<TacoMap>` occupies the entire view container. It
- *   initialises Mapbox GL JS, drops taco-emoji markers for every shop, and
- *   flies the camera to the user's geolocation on mount.
+ * Shop selection still opens a right-edge drawer on desktop / bottom sheet
+ * on mobile with the full `<ShopCard>` detail. Errors surface in a glass
+ * snackbar at the bottom.
  *
- * - **Floating info panel**: A `v-card` anchored to the top-left corner that
- *   shows "Find Tacos Near You" and a `v-progress-circular` spinner while
- *   `mapStore.loading` is `true`.
- *
- * - **Desktop shop panel (≥ md / 960 px)**: A `v-navigation-drawer` on the
- *   right edge that slides open when `mapStore.selectedShop` is non-null,
- *   displaying a `<ShopCard>` for the selected business. Closed via the ✕
- *   button which calls `mapStore.clearSelection()`.
- *
- * - **Mobile shop panel (< md)**: A `v-bottom-sheet` that rises from the
- *   bottom of the screen with the same `<ShopCard>` content.
- *
- * - **Error snackbar**: A 5-second `v-snackbar` (color `error`) shown when
- *   `mapStore.error` is non-null. Dismissed by the user or automatically after
- *   the timeout. Uses the project-standard error copy:
- *   _"The taco truck broke down 🚚💨 — couldn't load shops."_
- *
- * This view has **no props** and **no emits**. All data flow goes through
- * the `mapStore` Pinia store, which is kept alive for the lifetime of the
- * session.
- *
- * @example
- * ```ts
- * // Registered in src/router/index.ts as a lazy-loaded route:
- * { path: '/map', component: () => import('./views/MapView.vue') }
- * ```
+ * No props, no emits — all state lives in `mapStore`.
  */
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useDisplay } from 'vuetify'
 import TacoMap from '@/components/map/TacoMap.vue'
 import ShopCard from '@/components/map/ShopCard.vue'
 import { useMapStore } from '@/stores/mapStore'
 
-/**
- * Pinia store that owns the list of nearby taco shops, the currently selected
- * shop, the loading flag, and the error string. Mutated by `TacoMap` on
- * marker click and by the shop fetch triggered from `TacoMap.onMounted`.
- */
 const mapStore = useMapStore()
-
-/**
- * Vuetify display composable. `mdAndUp` is a computed boolean that is `true`
- * when the viewport width is ≥ 960 px (Vuetify's "md" breakpoint), driving the
- * conditional rendering of the desktop drawer vs. the mobile bottom-sheet.
- */
 const { mdAndUp } = useDisplay()
 
 /**
- * Two-way computed ref that controls the desktop `v-navigation-drawer` open
- * state. The getter returns `true` only when both the viewport is ≥ md AND a
- * shop is selected. The setter is intentionally a no-op — open/close state is
- * driven entirely by `mapStore.selectedShop` (set via `mapStore.clearSelection`
- * or `mapStore.selectShop`).
- *
- * @returns {boolean} `true` when the drawer should be shown; `false` otherwise.
+ * The map center captured from the most recent user pan/zoom. While set,
+ * the floating "Search this area" pill is visible. Cleared after a manual
+ * re-fetch (`searchHere`) completes or whenever the user navigates away.
  */
-const drawerOpen = computed({
-  get: () => mdAndUp.value && mapStore.selectedShop !== null,
-  set: () => {
-    /* controlled via mapStore */
-  },
-})
+const pendingSearchCenter = ref<{ lat: number; lng: number } | null>(null)
 
-/**
- * Two-way computed ref that controls the mobile `v-bottom-sheet` open state.
- * Mirror of `drawerOpen` for viewports narrower than the md breakpoint. The
- * setter is a no-op for the same reasons as `drawerOpen`.
- *
- * @returns {boolean} `true` when the bottom sheet should be shown; `false` otherwise.
- */
-const sheetOpen = computed({
-  get: () => !mdAndUp.value && mapStore.selectedShop !== null,
-  set: () => {
-    /* controlled via mapStore */
-  },
-})
+function onUserMove(center: { lat: number; lng: number }) {
+  pendingSearchCenter.value = center
+}
 
-/**
- * Computed boolean that determines whether the error snackbar is visible.
- * Maps directly to `mapStore.error !== null` so the snackbar disappears as
- * soon as the error is cleared (either by the user pressing "Dismiss" or by a
- * subsequent successful shop load resetting the error to `null`).
- *
- * @returns {boolean} `true` when there is an active error message to display.
- */
+async function searchHere() {
+  if (!pendingSearchCenter.value || mapStore.loading) return
+  const { lat, lng } = pendingSearchCenter.value
+  pendingSearchCenter.value = null
+  await mapStore.fetchShops(lat, lng)
+}
+
 const snackbarVisible = computed(() => mapStore.error !== null)
 
 /**
- * Clears the currently selected shop from the Pinia store, which causes both
- * `drawerOpen` and `sheetOpen` to evaluate to `false`, closing whichever panel
- * is currently open.
- *
- * Wired to the ✕ close button inside both the desktop drawer and the mobile
- * bottom sheet.
- *
- * @example
- * ```vue
- * <v-btn @click="closeSelection">Close</v-btn>
- * ```
+ * Label rendered inside the glass count pill at the top of the map.
+ * Shows a loading message while shops are in flight, otherwise the
+ * spot count once they've resolved.
  */
+const countPillLabel = computed(() => {
+  if (mapStore.loading) return 'Finding taco spots…'
+  if (mapStore.error) return 'No spots loaded'
+  const n = mapStore.shops.length
+  if (n === 0) return 'No taco spots nearby'
+  return `${n} taco spot${n === 1 ? '' : 's'} near you`
+})
+
 function closeSelection() {
   mapStore.clearSelection()
 }
 </script>
 
 <template>
-  <div class="map-view-container">
-    <!-- Map fills the full view -->
-    <TacoMap />
+  <div class="map-view">
+    <!-- Map fills the full viewport (behind the glass nav) -->
+    <TacoMap @user-move="onUserMove" />
 
-    <!-- Floating search/info panel (top-left) -->
-    <v-card
-      class="map-overlay-panel"
-      color="surface"
-      elevation="6"
-      rounded="lg"
-      style="position: absolute; top: 16px; left: 16px; z-index: 10; min-width: 220px"
-    >
-      <v-card-title class="d-flex align-center ga-3 py-3 px-4">
-        <span>Find Tacos Near You</span>
-        <v-progress-circular
-          v-if="mapStore.loading"
-          indeterminate
-          size="20"
-          width="2"
-          color="primary"
-          aria-label="Loading taco shops"
-        />
-      </v-card-title>
-    </v-card>
+    <!-- Glass count pill — replaces the old "Find Tacos Near You" panel.
+         Uses its own warm-dark glass tint (not the bone glass-panel utility)
+         so it stays legible over the light map basemap. -->
+    <div class="count-pill" role="status" aria-live="polite">
+      <span class="pill-icon" aria-hidden="true">🌮</span>
+      <span class="pill-label">{{ countPillLabel }}</span>
+      <span v-if="mapStore.loading" class="pill-dots" aria-hidden="true">
+        <span /><span /><span />
+      </span>
+    </div>
 
-    <!-- Desktop: navigation drawer on the right -->
-    <v-navigation-drawer
-      v-if="mdAndUp"
-      :model-value="drawerOpen"
-      location="right"
-      :temporary="true"
-      width="340"
-      color="surface"
-      aria-label="Shop details"
-      @update:model-value="(v) => !v && closeSelection()"
-    >
-      <div class="pa-3">
-        <div class="d-flex justify-end mb-2">
-          <v-btn
-            icon
-            variant="text"
-            aria-label="Close shop details"
-            @click="closeSelection"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <ShopCard v-if="mapStore.selectedShop" :shop="mapStore.selectedShop" />
+    <!-- "Search this area" pill — only appears after the user pans/zooms
+         the map and disappears once they tap it (or the fetch resolves). -->
+    <Transition name="search-rise">
+      <button
+        v-if="pendingSearchCenter && !mapStore.loading"
+        class="search-here-btn"
+        type="button"
+        aria-label="Search this area"
+        @click="searchHere"
+      >
+        <v-icon size="18" aria-hidden="true">mdi-magnify</v-icon>
+        <span>Search this area</span>
+      </button>
+    </Transition>
+
+    <!-- Desktop: a single floating shop card pinned to the right edge.
+         Slides in from the right; no drawer slab around it. -->
+    <Transition name="card-slide">
+      <div
+        v-if="mdAndUp && mapStore.selectedShop"
+        class="shop-card-float"
+        role="dialog"
+        aria-label="Shop details"
+      >
+        <button
+          class="card-close-btn"
+          type="button"
+          aria-label="Close shop details"
+          @click="closeSelection"
+        >
+          <v-icon size="20" aria-hidden="true">mdi-close</v-icon>
+        </button>
+        <ShopCard :shop="mapStore.selectedShop" />
       </div>
-    </v-navigation-drawer>
+    </Transition>
 
-    <!-- Mobile: bottom sheet -->
-    <v-bottom-sheet
-      v-if="!mdAndUp"
-      :model-value="sheetOpen"
-      aria-label="Shop details"
-      @update:model-value="(v) => !v && closeSelection()"
-    >
-      <div class="pa-3" style="background-color: #16213e">
-        <div class="d-flex justify-end mb-2">
-          <v-btn
-            icon
-            variant="text"
-            aria-label="Close shop details"
-            @click="closeSelection"
-          >
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </div>
-        <ShopCard v-if="mapStore.selectedShop" :shop="mapStore.selectedShop" />
+    <!-- Mobile: floating card pinned to the bottom edge + tap-to-dismiss scrim.
+         Same "just the card" treatment as desktop — no Vuetify bottom-sheet
+         panel underneath, so the card's own warm glass is the only background. -->
+    <Transition name="scrim-fade">
+      <div
+        v-if="!mdAndUp && mapStore.selectedShop"
+        class="shop-scrim"
+        aria-hidden="true"
+        @click="closeSelection"
+      />
+    </Transition>
+    <Transition name="card-rise">
+      <div
+        v-if="!mdAndUp && mapStore.selectedShop"
+        class="shop-card-float-mobile"
+        role="dialog"
+        aria-label="Shop details"
+      >
+        <button
+          class="card-close-btn"
+          type="button"
+          aria-label="Close shop details"
+          @click="closeSelection"
+        >
+          <v-icon size="20" aria-hidden="true">mdi-close</v-icon>
+        </button>
+        <ShopCard :shop="mapStore.selectedShop" />
       </div>
-    </v-bottom-sheet>
+    </Transition>
 
     <!-- Error snackbar -->
     <v-snackbar
@@ -210,19 +165,282 @@ function closeSelection() {
 </template>
 
 <style scoped>
-.map-view-container {
-  position: relative;
-  width: 100%;
+/* Map container fills the viewport so the glass nav blurs it underneath. */
+.map-view :deep(#map) {
+  position: fixed !important;
+  inset: 0;
+  width: 100vw;
   height: 100vh;
   height: 100dvh;
-  overflow: hidden;
+  z-index: 0;
 }
 
-/* Mobile: account for v-bottom-navigation (56px) */
+.count-pill {
+  position: fixed;
+  top: 20px;
+  /* Center over the visible map area. On desktop the 240px sidebar eats
+     the left edge, so shift right by half its width. */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  /* Warm-dark glass so the bone-white text stays legible against the
+     light map basemap. */
+  background: linear-gradient(
+    135deg,
+    rgba(60, 15, 22, 0.78) 0%,
+    rgba(124, 45, 18, 0.7) 100%
+  );
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  border: 1px solid rgba(252, 211, 77, 0.4);
+  box-shadow:
+    0 8px 24px rgba(20, 6, 8, 0.45),
+    0 0 0 1px rgba(255, 248, 240, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  color: var(--taco-bone);
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  animation: pillIn 320ms cubic-bezier(0.2, 0.9, 0.25, 1.1) both;
+  max-width: calc(100vw - 32px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pill-icon {
+  font-size: 18px;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+}
+
+.pill-label {
+  text-shadow: 0 1px 3px rgba(20, 6, 8, 0.45);
+}
+
+.pill-dots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 2px;
+}
+
+.pill-dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--taco-marigold);
+  animation: dotPulse 1.2s ease-in-out infinite;
+}
+
+.pill-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.pill-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes pillIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes dotPulse {
+  0%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* "Search this area" floating pill — bottom-center on desktop, raised
+   above the bottom nav on mobile. */
+.search-here-btn {
+  position: fixed;
+  bottom: 32px;
+  /* Centered over the visible map area; offset right of the desktop sidebar. */
+  left: 50%;
+  z-index: 5;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid rgba(252, 211, 77, 0.45);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 107, 53, 0.92) 0%,
+    rgba(225, 29, 72, 0.88) 100%
+  );
+  color: var(--taco-bone);
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow:
+    0 12px 28px rgba(255, 107, 53, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: scale 0.18s cubic-bezier(0.2, 0.9, 0.25, 1.2),
+    box-shadow 0.18s ease;
+}
+
+.search-here-btn:hover,
+.search-here-btn:focus-visible {
+  scale: 1.04;
+  box-shadow:
+    0 14px 32px rgba(255, 107, 53, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  outline: none;
+}
+
+.search-here-btn:active {
+  scale: 0.98;
+}
+
 @media (max-width: 959.98px) {
-  .map-view-container {
-    height: calc(100vh - 56px);
-    height: calc(100dvh - 56px);
+  .search-here-btn {
+    bottom: 76px;
+  }
+}
+
+/* Desktop only: offset both floating chrome elements past the 240px sidebar
+   so they sit centered over the map, not the whole viewport. */
+@media (min-width: 960px) {
+  .count-pill {
+    left: calc(50% + 120px);
+  }
+  .search-here-btn {
+    left: calc(50% + 120px);
+  }
+  .search-rise-enter-from {
+    translate: -50% 28px;
+  }
+  .search-rise-leave-to {
+    translate: -50% 12px;
+  }
+}
+
+.search-rise-enter-active,
+.search-rise-leave-active {
+  transition: opacity 0.26s ease, translate 0.32s cubic-bezier(0.2, 0.9, 0.25, 1.15);
+}
+
+.search-rise-enter-from {
+  opacity: 0;
+  translate: -50% 28px;
+}
+.search-rise-leave-to {
+  opacity: 0;
+  translate: -50% 12px;
+}
+
+/* Floating shop card (desktop only) — slides in from the right edge. */
+.shop-card-float {
+  position: fixed;
+  top: 88px;
+  right: 24px;
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 120px);
+  z-index: 6;
+  overflow: visible;
+}
+
+.card-close-btn {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(60, 15, 22, 0.92) 0%, rgba(20, 6, 8, 0.92) 100%);
+  border: 1px solid rgba(252, 211, 77, 0.42);
+  color: var(--taco-bone);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(20, 6, 8, 0.45);
+  transition: background 0.18s ease, scale 0.18s cubic-bezier(0.2, 0.9, 0.25, 1.2);
+}
+
+.card-close-btn:hover,
+.card-close-btn:focus-visible {
+  background: linear-gradient(135deg, rgba(225, 29, 72, 0.9) 0%, rgba(124, 45, 18, 0.92) 100%);
+  scale: 1.08;
+  outline: none;
+}
+
+.card-slide-enter-active,
+.card-slide-leave-active {
+  transition: opacity 0.28s ease, translate 0.32s cubic-bezier(0.2, 0.9, 0.25, 1.1);
+}
+
+.card-slide-enter-from,
+.card-slide-leave-to {
+  opacity: 0;
+  translate: 36px 0;
+}
+
+/* Mobile shop card — anchored to the bottom, above the bottom nav. */
+.shop-card-float-mobile {
+  position: fixed;
+  bottom: 76px;
+  left: 16px;
+  right: 16px;
+  z-index: 7;
+}
+
+.shop-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 6, 8, 0.5);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 6;
+}
+
+.scrim-fade-enter-active,
+.scrim-fade-leave-active {
+  transition: opacity 0.24s ease;
+}
+.scrim-fade-enter-from,
+.scrim-fade-leave-to {
+  opacity: 0;
+}
+
+.card-rise-enter-active,
+.card-rise-leave-active {
+  transition: opacity 0.28s ease, translate 0.32s cubic-bezier(0.2, 0.9, 0.25, 1.1);
+}
+.card-rise-enter-from,
+.card-rise-leave-to {
+  opacity: 0;
+  translate: 0 30px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .count-pill,
+  .pill-dots span {
+    animation: none;
   }
 }
 </style>

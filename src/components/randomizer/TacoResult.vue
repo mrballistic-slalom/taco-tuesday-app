@@ -4,7 +4,15 @@
     <v-card-title class="text-h5 pt-3">{{ recipe.title }}</v-card-title>
     <v-card-text>Your destiny is served. 🌮</v-card-text>
     <v-card-actions class="pa-4 pt-0 gap-2">
-      <v-btn color="primary" variant="elevated" @click="emit('view-recipe')">
+      <v-btn
+        v-if="recipe.sourceUrl"
+        color="primary"
+        variant="elevated"
+        :href="recipe.sourceUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+        append-icon="mdi-open-in-new"
+      >
         View Full Recipe
       </v-btn>
       <v-btn variant="outlined" @click="emit('spin-again')"> SPIN AGAIN 🎲 </v-btn>
@@ -26,8 +34,9 @@
  *  - The recipe title in `text-h5` typography.
  *  - A fun static tagline: "Your destiny is served. 🌮".
  *  - Two action buttons:
- *      1. "View Full Recipe" (primary, elevated) — emits `view-recipe` so the
- *         parent can open a `RecipeModal` for this recipe.
+ *      1. "View Full Recipe" (primary, elevated) — a direct external link to
+ *         `recipe.sourceUrl` opened in a new tab. Hidden when `sourceUrl`
+ *         is absent.
  *      2. "SPIN AGAIN 🎲" (outlined) — emits `spin-again` so the parent can
  *         call `randomizerStore.reset()` and clear the result, hiding this card.
  *
@@ -60,19 +69,17 @@ defineProps<{
 /**
  * Events emitted by TacoResult.
  *
- * @emits view-recipe - Fired when the user clicks "View Full Recipe". The
- *   parent (`RandomizerView`) responds by setting `selectedRecipeForModal` to
- *   the current recipe and opening a `RecipeModal` dialog. No payload is
- *   included — the parent already has the recipe from the store.
- *
  * @emits spin-again - Fired when the user clicks "SPIN AGAIN 🎲". The parent
  *   calls `randomizerStore.reset()`, which clears `result` and `error` in the
  *   store, causing the `v-if="randomizerStore.result"` condition in the parent
  *   template to become false and hiding this component via the slide-up
  *   transition.
+ *
+ * The "View Full Recipe" button is rendered as a direct `<a target="_blank">`
+ * link to `recipe.sourceUrl`, so there is no `view-recipe` event — the parent
+ * doesn't need to mediate the navigation.
  */
 const emit = defineEmits<{
-  (e: 'view-recipe'): void
   (e: 'spin-again'): void
 }>()
 </script>

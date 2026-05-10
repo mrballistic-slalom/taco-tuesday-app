@@ -1,40 +1,24 @@
 <script setup lang="ts">
 /**
- * TuesdayShopCard component.
+ * TuesdayShopCard — glass card for a single ranked Taco Tuesday spot.
  *
- * Specialised shop card for `TuesdayView`. Renders a Mapbox taco POI with a
- * prominent rank badge (🥇/🥈/🥉 for the top three, a numbered `v-chip` for
- * ranks 4+), the shop's name, a randomly selected Tuesday-themed tagline,
- * full address, category chips, and a Google Maps directions deep-link.
- *
- * Cards are stacked vertically in `TuesdayView` and are only shown when it
- * is actually Tuesday and the Mapbox API has returned results.
- *
- * @example
- * ```vue
- * <TuesdayShopCard
- *   v-for="(spot, index) in tuesdayStore.spots"
- *   :key="spot.id"
- *   :shop="spot"
- *   :rank="index + 1"
- *   class="mb-4"
- * />
- * ```
+ * Ranks 1–3 wear medal emoji; ranks 4+ get a numbered chip. When `isChampion`
+ * is true (typically rank 1), the card gets a glowing marigold border, a
+ * "Today's Champion" eyebrow ribbon, and a slow shimmer animation. Mapbox
+ * doesn't return ratings, prices, or photos, so cards lead with name +
+ * address + category chips + a Google Maps directions deep link.
  */
 import { computed } from 'vue'
 import type { MapboxTacoShop } from '@/types/mapbox'
 
 const props = defineProps<{
-  /**
-   * The Mapbox POI to render. Sourced from `tuesdayStore.spots`.
-   */
   shop: MapboxTacoShop
-
-  /**
-   * 1-based rank in the sorted result list. Ranks 1–3 display medal
-   * emoji; ranks 4+ display a numbered chip.
-   */
   rank: number
+  /**
+   * When `true`, applies the "Today's Champion" glow + ribbon treatment.
+   * `TuesdayView` passes this for the first spot in the ranked list.
+   */
+  isChampion?: boolean
 }>()
 
 const taglines = [
@@ -48,6 +32,19 @@ const taglines = [
 
 const tagline = taglines[Math.floor(Math.random() * taglines.length)]
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  mexican_restaurant: '🇲🇽',
+  taco_shop: '🌮',
+  restaurant: '🍽️',
+  food: '🍴',
+  food_truck: '🚚',
+  fast_food_restaurant: '🥡',
+  bar: '🍻',
+  cafe: '☕',
+  bakery: '🥐',
+  ice_cream: '🍦',
+}
+
 function formatCategory(slug: string): string {
   return slug
     .split('_')
@@ -55,9 +52,10 @@ function formatCategory(slug: string): string {
     .join(' ')
 }
 
-/**
- * Medal emoji for top-3 ranks, or `null` for ranks 4+ (numbered chip path).
- */
+function categoryEmoji(slug: string): string {
+  return CATEGORY_EMOJI[slug] ?? '✦'
+}
+
 const rankEmoji = computed(() => {
   if (props.rank === 1) return '🥇'
   if (props.rank === 2) return '🥈'
@@ -65,9 +63,6 @@ const rankEmoji = computed(() => {
   return null
 })
 
-/**
- * Google Maps directions deep-link targeting this shop's coordinates.
- */
 const directionsUrl = computed(() => {
   const { latitude, longitude } = props.shop.coordinates
   return `https://www.google.com/maps/dir/?api=1&destination=${latitude},${longitude}`
@@ -75,67 +70,287 @@ const directionsUrl = computed(() => {
 </script>
 
 <template>
-  <v-card color="surface" rounded="lg" class="tuesday-shop-card">
-    <div class="rank-badge pa-3">
-      <span v-if="rankEmoji" style="font-size: 28px" :aria-label="`Rank ${rank}`">
-        {{ rankEmoji }}
-      </span>
-      <v-chip v-else color="primary" size="small" :aria-label="`Rank ${rank}`">
-        #{{ rank }}
-      </v-chip>
+  <article
+    class="tuesday-shop-card glass-panel-strong"
+    :class="{ champion: isChampion }"
+  >
+    <div v-if="isChampion" class="champion-ribbon" aria-hidden="true">
+      <span class="ribbon-crown">👑</span>
+      <span>Today's Champion</span>
     </div>
 
-    <v-card-title class="text-h6 pt-2 pb-1 pl-14" style="white-space: normal">
-      {{ shop.name }}
-    </v-card-title>
+    <div class="rank-badge">
+      <span v-if="rankEmoji" class="rank-emoji" :aria-label="`Rank ${rank}`">{{ rankEmoji }}</span>
+      <span v-else class="rank-number" :aria-label="`Rank ${rank}`">#{{ rank }}</span>
+    </div>
 
-    <v-card-subtitle class="pb-2 font-italic text-secondary">
-      {{ tagline }}
-    </v-card-subtitle>
+    <div class="card-strip" aria-hidden="true" />
 
-    <v-card-text class="pb-2">
-      <div v-if="shop.full_address" class="d-flex align-start ga-2 mb-3">
-        <v-icon size="small" color="accent" aria-hidden="true">mdi-map-marker</v-icon>
-        <span class="text-body-2">{{ shop.full_address }}</span>
+    <header class="card-header">
+      <h3 class="shop-name">{{ shop.name }}</h3>
+      <p class="tagline">{{ tagline }}</p>
+    </header>
+
+    <div class="card-body">
+      <div v-if="shop.full_address" class="address-row">
+        <v-icon size="small" color="secondary" aria-hidden="true">mdi-map-marker</v-icon>
+        <span>{{ shop.full_address }}</span>
       </div>
 
-      <div v-if="shop.categories.length" class="d-flex flex-wrap ga-1">
-        <v-chip
+      <div v-if="shop.categories.length" class="chip-row">
+        <span
           v-for="category in shop.categories"
           :key="category"
-          size="small"
-          color="accent"
-          variant="tonal"
+          class="category-chip"
         >
+          <span class="chip-emoji" aria-hidden="true">{{ categoryEmoji(category) }}</span>
           {{ formatCategory(category) }}
-        </v-chip>
+        </span>
       </div>
-    </v-card-text>
+    </div>
 
-    <v-card-actions class="pa-4 pt-0">
-      <v-btn
-        variant="outlined"
-        color="primary"
+    <footer class="card-actions">
+      <a
+        class="directions-btn"
         :href="directionsUrl"
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Get directions"
       >
-        Get Directions
-        <v-icon end aria-hidden="true">mdi-directions</v-icon>
-      </v-btn>
-    </v-card-actions>
-  </v-card>
+        <span>Get Directions</span>
+        <v-icon size="small" aria-hidden="true">mdi-arrow-top-right</v-icon>
+      </a>
+    </footer>
+  </article>
 </template>
 
 <style scoped>
 .tuesday-shop-card {
   position: relative;
+  border-radius: 18px;
+  color: var(--taco-bone);
+  overflow: hidden;
+  padding: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
+
+.tuesday-shop-card:hover {
+  transform: translateY(-2px);
+}
+
+.card-strip {
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    #e11d48 0%,
+    #ff6b35 40%,
+    #fcd34d 75%,
+    #06d6a0 100%
+  );
+}
+
 .rank-badge {
   position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 1;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rank-emoji {
+  font-size: 34px;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
+}
+
+.rank-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff6b35 0%, #e11d48 100%);
+  color: var(--taco-bone);
+  font-family: 'Yatra One', cursive;
+  font-size: 0.95rem;
+  box-shadow:
+    0 4px 12px rgba(255, 107, 53, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.card-header {
+  padding: 18px 64px 8px 22px;
+}
+
+.shop-name {
+  font-family: 'Yatra One', cursive;
+  font-size: 1.55rem;
+  margin: 0 0 6px;
+  line-height: 1.2;
+  color: var(--taco-bone);
+}
+
+.tagline {
+  margin: 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--taco-marigold);
+}
+
+.card-body {
+  padding: 8px 22px 14px;
+}
+
+.address-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.94rem;
+  color: rgba(255, 248, 240, 0.88);
+  margin-bottom: 14px;
+  line-height: 1.45;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(6, 214, 160, 0.16);
+  border: 1px solid rgba(6, 214, 160, 0.32);
+  color: var(--taco-bone);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.chip-emoji {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.card-actions {
+  padding: 6px 22px 20px;
+}
+
+.directions-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff6b35 0%, #e11d48 100%);
+  color: var(--taco-bone);
+  font-weight: 700;
+  font-size: 0.92rem;
+  text-decoration: none;
+  letter-spacing: 0.01em;
+  box-shadow:
+    0 6px 18px rgba(255, 107, 53, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.directions-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 10px 24px rgba(255, 107, 53, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+/* === Champion treatment === */
+.tuesday-shop-card.champion {
+  border: 1px solid rgba(252, 211, 77, 0.55);
+  box-shadow:
+    0 12px 36px rgba(20, 6, 8, 0.45),
+    0 0 0 1px rgba(252, 211, 77, 0.35),
+    0 0 32px rgba(252, 211, 77, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  animation: championShimmer 4s ease-in-out infinite;
+}
+
+.tuesday-shop-card.champion .card-strip {
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    #fcd34d 0%,
+    #ff6b35 50%,
+    #fcd34d 100%
+  );
+  background-size: 200% 100%;
+  animation: stripeShift 3s linear infinite;
+}
+
+.champion-ribbon {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 6px 12px;
+  background: linear-gradient(135deg, #fcd34d 0%, #ff6b35 100%);
+  color: #2a0e0e;
+  font-family: 'Yatra One', cursive;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  border-radius: 0 999px 999px 0;
+  box-shadow:
+    0 4px 14px rgba(252, 211, 77, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.ribbon-crown {
+  font-size: 1rem;
+}
+
+@keyframes championShimmer {
+  0%,
+  100% {
+    box-shadow:
+      0 12px 36px rgba(20, 6, 8, 0.45),
+      0 0 0 1px rgba(252, 211, 77, 0.35),
+      0 0 32px rgba(252, 211, 77, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  }
+  50% {
+    box-shadow:
+      0 14px 42px rgba(20, 6, 8, 0.5),
+      0 0 0 1px rgba(252, 211, 77, 0.55),
+      0 0 48px rgba(252, 211, 77, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  }
+}
+
+@keyframes stripeShift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* Champion ribbon pushes the header right a bit so it doesn't collide */
+.tuesday-shop-card.champion .card-header {
+  padding-top: 50px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tuesday-shop-card,
+  .tuesday-shop-card.champion,
+  .tuesday-shop-card.champion .card-strip {
+    animation: none;
+  }
 }
 </style>

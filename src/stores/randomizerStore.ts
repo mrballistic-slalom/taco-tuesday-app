@@ -100,10 +100,11 @@ export const useRandomizerStore = defineStore('randomizer', () => {
    * 4. On network / API failure: stores the error message in `error`.
    * 5. Always sets `isSpinning` back to `false` in the `finally` block.
    *
-   * The 12 possible values for `tacoType` (driven by `SpinWheel` segments):
-   *   `Al Pastor`, `Carnitas`, `Birria`, `Fish Taco`, `Carne Asada`,
-   *   `Veggie`, `Chicken Tinga`, `Barbacoa`, `Shrimp`, `Chorizo`,
-   *   `Lengua`, `Potato`
+   * The 8 possible values for `tacoType` (driven by `SpinWheel` segments):
+   *   `Al Pastor`, `Carnitas`, `Fish Taco`, `Veggie`, `Chicken Tinga`,
+   *   `Shrimp`, `Chorizo`, `Potato`
+   *   (Birria, Lengua, Barbacoa, and Carne Asada are excluded — no
+   *   TheMealDB recipes match.)
    *
    * @param {string} tacoType - The taco category name that the wheel
    *   landed on.  Passed verbatim to `getRandomRecipeForType`.
